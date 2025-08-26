@@ -8,7 +8,7 @@ export function Header() {
           <Waves className="w-6 h-6 text-white" />
         </div>
         <div>
-          <h1 className="text-white text-xl font-medium">Blue Carbon MRV</h1>
+          <h1 className="text-white text-xl font-medium">Green Token</h1>
           <p className="text-white/80 text-sm">Monitoring, Reporting, Verification</p>
         </div>
       </div>
