@@ -1,4 +1,5 @@
-# Blue Carbon MRV Platform
+# GreenToken
+## A Blue Carbon MRV Platform
 
 A full-stack application for managing blue carbon projects, monitoring carbon credits, and enabling a tokenized marketplace for verified environmental projects. This platform allows users, NGOs, researchers, and verifiers to collaborate and track environmental impact while facilitating carbon credit issuance and trading.
 
