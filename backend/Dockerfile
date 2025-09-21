@@ -3,13 +3,13 @@ FROM node:18-alpine
 WORKDIR /app
 
 # Install system dependencies
-RUN apk add --no-cache curl
+RUN apk add --no-cache curl bash
 
 # Copy package files first (for better Docker caching)
 COPY package*.json ./
 
-# Install ALL dependencies (including devDependencies for build)
-RUN npm ci
+# Use npm install instead of npm ci (works without package-lock.json)
+RUN npm install
 
 # Copy Prisma schema
 COPY prisma ./prisma/
@@ -32,10 +32,7 @@ RUN ls -la dist/ || echo "Build output not found!"
 # Create necessary directories
 RUN mkdir -p /app/uploads /app/logs
 
-# Install only production dependencies for the final image
-RUN npm ci --omit=dev
-
-# Generate Prisma client again after production install
+# Generate Prisma client again to be extra sure
 RUN npx prisma generate
 
 # Verify Prisma client exists in final image
