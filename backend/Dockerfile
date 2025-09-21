@@ -6,17 +6,17 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install production dependencies only
+# Install dependencies
 RUN npm install --omit=dev
 
 # Copy source code
 COPY . .
 
+# Generate Prisma client BEFORE building TypeScript
+RUN npx prisma generate
+
 # Build TypeScript
 RUN npm run build
-
-# Generate Prisma client
-RUN npx prisma generate
 
 EXPOSE 5000
 
