@@ -130,7 +130,7 @@ export class AuthController {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json(user);
+    return res.json(user);
   });
 
   updateProfile = asyncHandler(async (req: Request, res: Response) => {
