@@ -8,6 +8,9 @@ RUN apk add --no-cache curl bash
 # Copy package files first (for better Docker caching)
 COPY package*.json ./
 
+# Install deps + openssl + libc compatibility
+RUN apk add --no-cache openssl1.1 libc6-compat
+
 # Use npm install instead of npm ci (works without package-lock.json)
 RUN npm install
 
