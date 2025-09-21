@@ -1,0 +1,143 @@
+generator client {
+  provider = "prisma-client-js"
+  output = "../../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  NGO
+  PANCHAYAT
+  COMMUNITY
+  RESEARCHER
+  ADMIN
+  VERIFIER
+}
+
+enum ProjectStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ACTIVE
+  COMPLETED
+}
+
+enum EcosystemType {
+  MANGROVE
+  SEAGRASS
+  SALT_MARSH
+  KELP
+}
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  passwordHash      String
+  name              String
+  organizationName  String?
+  role              UserRole  @default(NGO)
+  walletAddress     String?   @unique
+  isVerified        Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  projects          Project[]
+  transactions      Transaction[]
+  notifications     Notification[]
+
+  @@map("users")
+}
+
+model Project {
+  id                String          @id @default(cuid())
+  name              String
+  description       String?
+  location          String
+  latitude          Float
+  longitude         Float
+  areaHectares      Float
+  ecosystemType     EcosystemType
+  status            ProjectStatus   @default(PENDING)
+  blockchainId      Int?            @unique
+  ipfsHash          String?
+  estimatedCredits  Int?
+  issuedCredits     Int             @default(0)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  approvedAt        DateTime?
+  
+  owner             User            @relation(fields: [ownerId], references: [id])
+  ownerId           String
+  
+  documents         Document[]
+  monitoringData    MonitoringData[]
+  transactions      Transaction[]
+
+  @@map("projects")
+}
+
+model Document {
+  id          String   @id @default(cuid())
+  filename    String
+  originalName String
+  mimeType    String
+  size        Int
+  ipfsHash    String?
+  uploadedAt  DateTime @default(now())
+  
+  project     Project  @relation(fields: [projectId], references: [id])
+  projectId   String
+
+  @@map("documents")
+}
+
+model MonitoringData {
+  id            String   @id @default(cuid())
+  dataType      String   // biomass, carbon_stock, biodiversity
+  value         Float
+  unit          String
+  methodology   String?
+  measuredAt    DateTime
+  uploadedAt    DateTime @default(now())
+  ipfsHash      String?
+  
+  project       Project  @relation(fields: [projectId], references: [id])
+  projectId     String
+
+  @@map("monitoring_data")
+}
+
+model Transaction {
+  id              String    @id @default(cuid())
+  type            String    // mint, transfer, burn, buy, sell
+  amount          Float
+  pricePerToken   Float?
+  txHash          String?   @unique
+  status          String    @default("pending") // pending, confirmed, failed
+  createdAt       DateTime  @default(now())
+  
+  user            User      @relation(fields: [userId], references: [id])
+  userId          String
+  
+  project         Project?  @relation(fields: [projectId], references: [id])
+  projectId       String?
+
+  @@map("transactions")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  title     String
+  message   String
+  type      String   // info, success, warning, error
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+
+  @@map("notifications")
+}
