@@ -1,0 +1,16 @@
+{
+  "short_name": "Blue Carbon MRV",
+  "name": "Blue Carbon MRV System",
+  "description": "Blockchain-powered Blue Carbon Monitoring, Reporting, and Verification System",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#1d4ed8",
+  "background_color": "#ffffff"
+}

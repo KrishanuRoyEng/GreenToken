@@ -1,0 +1,93 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: blue_carbon_mrv
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # IPFS Node
+  ipfs:
+    image: ipfs/go-ipfs:latest
+    ports:
+      - "5001:5001"
+      - "8080:8080"
+    volumes:
+      - ipfs_data:/data/ipfs
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/blue_carbon_mrv
+      REDIS_URL: redis://redis:6379
+      IPFS_HOST: ipfs
+      IPFS_PORT: 5001
+      JWT_SECRET: your-super-secret-jwt-key
+      BLOCKCHAIN_RPC_URL: https://polygon-mumbai.g.alchemy.com/v2/your-api-key
+      ADMIN_PRIVATE_KEY: your-admin-private-key
+      PROJECT_REGISTRY_ADDRESS: 0x...
+      CARBON_CREDIT_TOKEN_ADDRESS: 0x...
+      SOULBOUND_TOKEN_ADDRESS: 0x...
+    depends_on:
+      - postgres
+      - redis
+      - ipfs
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+  # Frontend React App
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      REACT_APP_API_URL: http://localhost:5000/api
+      REACT_APP_BLOCKCHAIN_NETWORK: mumbai
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+  # Hardhat for blockchain deployment
+  blockchain:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.hardhat
+    volumes:
+      - ./backend/contracts:/app/contracts
+      - ./backend/scripts:/app/scripts
+    environment:
+      PRIVATE_KEY: your-deployer-private-key
+      ALCHEMY_API_KEY: your-alchemy-api-key
+
+volumes:
+  postgres_data:
+  redis_data:
+  ipfs_data:
