@@ -1,34 +1,26 @@
 import { Request, Response, NextFunction } from "express";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Transaction, Prisma } from "@prisma/client";
 import { logger } from "../utils/logger";
 import { asyncHandler, createError } from "../middleware/errorHandler";
 import { validateTokenTransaction } from "../utils/validation";
 
 const prisma = new PrismaClient();
 
-// Custom type for sell orders including user info
-type SellOrderWithUser = {
-  id: string;
-  type: string;
-  amount: number;
-  pricePerToken: number | null;
-  txHash: string | null;
-  status: string;
-  createdAt: Date;
-  userId: string;
-  projectId: string | null;
-  user: {
-    name: string;
-    organizationName: string | null;
-  } | null;
-};
+// Use Prisma's generated types for complex queries
+type TransactionWithProject = Prisma.TransactionGetPayload<{
+  include: { project: { select: { id: true, name: true } } }
+}>;
+
+type TransactionWithUser = Prisma.TransactionGetPayload<{
+  include: { user: { select: { name: true, organizationName: true } } }
+}>;
 
 export class TokenController {
   // Get user token balances and transactions
   getUserTokens = asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user.id;
 
-    const transactions = await prisma.transaction.findMany({
+    const transactions: TransactionWithProject[] = await prisma.transaction.findMany({
       where: { userId },
       orderBy: { createdAt: "desc" },
       take: 50,
@@ -41,7 +33,7 @@ export class TokenController {
     let soldTokens = 0;
     let acquiredTokens = 0;
 
-    transactions.forEach((tx) => {
+    transactions.forEach((tx: TransactionWithProject) => {
       if (tx.type === "mint" || tx.type === "buy") {
         totalTokens += tx.amount;
         if (tx.type === "buy") acquiredTokens += tx.amount;
@@ -106,12 +98,12 @@ export class TokenController {
         return next(createError("Price per token is required", 400));
 
       // Calculate user balance
-      const userTransactions = await prisma.transaction.findMany({
+      const userTransactions: Transaction[] = await prisma.transaction.findMany({
         where: { userId },
       });
 
       let balance = 0;
-      userTransactions.forEach((tx) => {
+      userTransactions.forEach((tx: Transaction) => {
         if (tx.type === "mint" || tx.type === "buy") balance += tx.amount;
         else if (tx.type === "sell" || tx.type === "burn") balance -= tx.amount;
       });
@@ -150,7 +142,7 @@ export class TokenController {
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 20;
 
-    const sellOrders: SellOrderWithUser[] = await prisma.transaction.findMany({
+    const sellOrders: TransactionWithUser[] = await prisma.transaction.findMany({
       where: { type: "sell", status: "pending" },
       include: { user: { select: { name: true, organizationName: true } } },
       orderBy: { createdAt: "desc" },
@@ -186,7 +178,7 @@ export class TokenController {
       const { orderId } = req.params;
       const userId = req.user.id;
 
-      const sellOrder = await prisma.transaction.findUnique({
+      const sellOrder: TransactionWithUser | null = await prisma.transaction.findUnique({
         where: { id: orderId },
         include: { user: { select: { name: true, organizationName: true } } },
       });
@@ -230,7 +222,7 @@ export class TokenController {
 
   // Private helper: get market statistics
   private async getMarketStats() {
-    const transactions = await prisma.transaction.findMany({
+    const transactions: Transaction[] = await prisma.transaction.findMany({
       where: {
         type: { in: ["buy", "sell"] },
         status: "confirmed",
@@ -239,17 +231,17 @@ export class TokenController {
     });
 
     const totalVolume = transactions.reduce(
-      (sum, tx) => sum + tx.amount * (tx.pricePerToken || 0),
+      (sum: number, tx: Transaction) => sum + tx.amount * (tx.pricePerToken || 0),
       0
     );
 
     const prices = transactions
-      .filter((tx) => tx.pricePerToken)
-      .map((tx) => tx.pricePerToken!);
+      .filter((tx: Transaction) => tx.pricePerToken)
+      .map((tx: Transaction) => tx.pricePerToken!);
 
     const avgPrice =
       prices.length > 0
-        ? prices.reduce((sum, price) => sum + price, 0) / prices.length
+        ? prices.reduce((sum: number, price: number) => sum + price, 0) / prices.length
         : 0;
 
     return {
