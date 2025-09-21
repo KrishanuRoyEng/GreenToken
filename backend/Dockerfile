@@ -11,11 +11,11 @@ COPY package*.json ./
 # Install OpenSSL 3 + glibc compatibility
 RUN apk add --no-cache openssl libc6-compat
 
-# Use npm install
-RUN npm install
-
 # Copy Prisma schema
 COPY prisma ./prisma/
+
+# Use npm install
+RUN npm install
 
 # Generate Prisma client BEFORE copying source code
 RUN npx prisma generate
