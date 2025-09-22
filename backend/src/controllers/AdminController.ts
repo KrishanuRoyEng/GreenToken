@@ -1,14 +1,15 @@
 import { Request, Response, NextFunction } from "express";
-import { PrismaClient } from "@prisma/client";
 import { logger } from "../utils/logger";
 import { asyncHandler, createError } from "../middleware/errorHandler";
 import { validateCreditIssuance } from "../utils/validation";
 import { io } from "../app";
-
-const prisma = new PrismaClient();
+import PrismaClientSingleton from "../lib/prisma";
 
 export class AdminController {
   getSystemStats = asyncHandler(async (req: Request, res: Response) => {
+
+    //lazy initialization
+    const prisma = await PrismaClientSingleton.getInstance();
     const [
       totalUsers,
       totalProjects,
@@ -62,6 +63,10 @@ export class AdminController {
   });
 
   getAllUsers = asyncHandler(async (req: Request, res: Response) => {
+
+    //lazy initialization
+    const prisma = await PrismaClientSingleton.getInstance();
+
     const { page = 1, limit = 20, role, search } = req.query;
 
     const where: any = {};
@@ -110,6 +115,10 @@ export class AdminController {
 
   updateUserRole = asyncHandler(
     async (req: Request, res: Response, next: NextFunction) => {
+
+      //lazy initialization
+      const prisma = await PrismaClientSingleton.getInstance();
+
       const { userId } = req.params;
       const { role } = req.body;
 
@@ -155,6 +164,10 @@ export class AdminController {
 
   verifyUser = asyncHandler(
     async (req: Request, res: Response, next: NextFunction) => {
+
+      //lazy initialization
+      const prisma = await PrismaClientSingleton.getInstance();
+
       const { userId } = req.params;
 
       const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -187,6 +200,10 @@ export class AdminController {
 
   issueCredits = asyncHandler(
     async (req: Request, res: Response, next: NextFunction) => {
+
+      //lazy initialization
+      const prisma = await PrismaClientSingleton.getInstance();
+
       const { projectId } = req.params;
       const { error, value } = validateCreditIssuance(req.body);
 
@@ -264,6 +281,10 @@ export class AdminController {
   );
 
   getPendingApprovals = asyncHandler(async (req: Request, res: Response) => {
+    
+    //lazy initialization
+    const prisma = await PrismaClientSingleton.getInstance();
+
     const pendingProjects = await prisma.project.findMany({
       where: { status: "PENDING" },
       include: {
@@ -278,6 +299,10 @@ export class AdminController {
   });
 
   approveProject = asyncHandler(async (req: Request, res: Response) => {
+
+    //lazy initialization
+    const prisma = await PrismaClientSingleton.getInstance();
+
     const { projectId } = req.params;
 
     const project = await prisma.project.findUnique({
@@ -311,6 +336,10 @@ export class AdminController {
   });
 
   rejectProject = asyncHandler(async (req: Request, res: Response) => {
+
+    //lazy initialization
+    const prisma = await PrismaClientSingleton.getInstance();
+    
     const { projectId } = req.params;
 
     const project = await prisma.project.findUnique({

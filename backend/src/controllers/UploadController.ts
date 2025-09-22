@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -7,8 +6,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../utils/logger';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import { MAX_FILE_SIZE, ALLOWED_FILE_TYPES } from '../utils/constants';
+import PrismaClientSingleton from '../lib/prisma';
 
-const prisma = new PrismaClient();
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -46,6 +45,9 @@ export class UploadController {
     }
 
     const { projectId } = req.body;
+
+    // Get Prisma client lazily
+    const prisma = await PrismaClientSingleton.getInstance();
     
     // Save file info to database
     const document = await prisma.document.create({
@@ -75,6 +77,9 @@ export class UploadController {
   getFile = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     const { fileId } = req.params;
 
+    // Get Prisma client lazily
+    const prisma = await PrismaClientSingleton.getInstance();
+
     const document = await prisma.document.findUnique({
       where: { id: fileId },
       include: { project: true }
@@ -95,6 +100,9 @@ export class UploadController {
 
   deleteFile = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     const { fileId } = req.params;
+
+    // Get Prisma client lazily
+    const prisma = await PrismaClientSingleton.getInstance();
 
     const document = await prisma.document.findUnique({
       where: { id: fileId },

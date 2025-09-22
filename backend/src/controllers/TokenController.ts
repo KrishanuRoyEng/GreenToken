@@ -1,12 +1,11 @@
 import { Request, Response, NextFunction } from "express";
-import { PrismaClient, Transaction, User } from "@prisma/client";
 import { logger } from "../utils/logger";
 import { asyncHandler, createError } from "../middleware/errorHandler";
 import { validateTokenTransaction } from "../utils/validation";
+import PrismaClientSingleton from "../lib/prisma";
 
-const prisma = new PrismaClient();
-
-type SellOrderWithUser = {
+// Define transaction types manually based on your schema
+interface Transaction {
   id: string;
   type: string;
   amount: number;
@@ -16,17 +15,31 @@ type SellOrderWithUser = {
   createdAt: Date;
   userId: string;
   projectId: string | null;
+}
+
+interface TransactionWithProject extends Transaction {
+  project: {
+    id: string;
+    name: string;
+  } | null;
+}
+
+interface TransactionWithUser extends Transaction {
   user: {
     name: string;
     organizationName: string | null;
   } | null;
-};
+}
 
 export class TokenController {
+  // Get user token balances and transactions
   getUserTokens = asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user.id;
 
-    const transactions: Transaction[] = await prisma.transaction.findMany({
+    // Get Prisma client lazily
+    const prisma = await PrismaClientSingleton.getInstance();
+
+    const transactions = await prisma.transaction.findMany({
       where: { userId },
       orderBy: { createdAt: "desc" },
       take: 50,
@@ -39,7 +52,7 @@ export class TokenController {
     let soldTokens = 0;
     let acquiredTokens = 0;
 
-    transactions.forEach((tx: Transaction) => {
+    transactions.forEach((tx: any) => {
       if (tx.type === "mint" || tx.type === "buy") {
         totalTokens += tx.amount;
         if (tx.type === "buy") acquiredTokens += tx.amount;
@@ -59,6 +72,7 @@ export class TokenController {
     });
   });
 
+  // Buy tokens
   buyTokens = asyncHandler(
     async (req: Request, res: Response, next: NextFunction) => {
       const { error, value } = validateTokenTransaction(req.body);
@@ -69,7 +83,10 @@ export class TokenController {
       const pricePerToken = 50;
       const totalPrice = amount * pricePerToken;
 
-      const transaction: Transaction = await prisma.transaction.create({
+      // Get Prisma client lazily
+      const prisma = await PrismaClientSingleton.getInstance();
+
+      const transaction = await prisma.transaction.create({
         data: {
           type: "buy",
           amount,
@@ -90,6 +107,7 @@ export class TokenController {
     }
   );
 
+  // Sell tokens
   sellTokens = asyncHandler(
     async (req: Request, res: Response, next: NextFunction) => {
       const { error, value } = validateTokenTransaction(req.body);
@@ -98,15 +116,19 @@ export class TokenController {
       const userId = req.user.id;
       const { amount, pricePerToken } = value;
 
+      // Get Prisma client lazily
+      const prisma = await PrismaClientSingleton.getInstance();
+
       if (!pricePerToken)
         return next(createError("Price per token is required", 400));
 
-      const userTransactions: Transaction[] = await prisma.transaction.findMany(
-        { where: { userId } }
-      );
+      // Calculate user balance
+      const userTransactions = await prisma.transaction.findMany({
+        where: { userId },
+      });
 
       let balance = 0;
-      userTransactions.forEach((tx: Transaction) => {
+      userTransactions.forEach((tx: any) => {
         if (tx.type === "mint" || tx.type === "buy") balance += tx.amount;
         else if (tx.type === "sell" || tx.type === "burn") balance -= tx.amount;
       });
@@ -114,7 +136,7 @@ export class TokenController {
       if (balance < amount)
         return next(createError("Insufficient token balance", 400));
 
-      const transaction: Transaction = await prisma.transaction.create({
+      const transaction = await prisma.transaction.create({
         data: {
           type: "sell",
           amount,
@@ -140,11 +162,15 @@ export class TokenController {
     }
   );
 
+  // Get marketplace sell orders
   getMarketplace = asyncHandler(async (req: Request, res: Response) => {
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 20;
 
-    const sellOrders: SellOrderWithUser[] = await prisma.transaction.findMany({
+    // Get Prisma client lazily
+    const prisma = await PrismaClientSingleton.getInstance();
+
+    const sellOrders = await prisma.transaction.findMany({
       where: { type: "sell", status: "pending" },
       include: { user: { select: { name: true, organizationName: true } } },
       orderBy: { createdAt: "desc" },
@@ -155,10 +181,11 @@ export class TokenController {
     const total = await prisma.transaction.count({
       where: { type: "sell", status: "pending" },
     });
+
     const stats = await this.getMarketStats();
 
     res.json({
-      orders: sellOrders.map((order) => ({
+      orders: sellOrders.map((order: any) => ({
         id: order.id,
         seller: order.user
           ? order.user.name || order.user.organizationName
@@ -173,16 +200,19 @@ export class TokenController {
     });
   });
 
+  // Purchase tokens from marketplace
   purchaseFromMarketplace = asyncHandler(
     async (req: Request, res: Response, next: NextFunction) => {
       const { orderId } = req.params;
       const userId = req.user.id;
 
-      const sellOrder: (Transaction & { user: User | null }) | null =
-        await prisma.transaction.findUnique({
-          where: { id: orderId },
-          include: { user: true },
-        });
+      // Get Prisma client lazily
+      const prisma = await PrismaClientSingleton.getInstance();
+
+      const sellOrder = await prisma.transaction.findUnique({
+        where: { id: orderId },
+        include: { user: { select: { name: true, organizationName: true } } },
+      });
 
       if (
         !sellOrder ||
@@ -225,8 +255,13 @@ export class TokenController {
     }
   );
 
+  // Private helper: get market statistics
   private async getMarketStats() {
-    const transactions: Transaction[] = await prisma.transaction.findMany({
+
+    // Get Prisma client lazily
+    const prisma = await PrismaClientSingleton.getInstance();
+    
+    const transactions = await prisma.transaction.findMany({
       where: {
         type: { in: ["buy", "sell"] },
         status: "confirmed",
@@ -235,14 +270,14 @@ export class TokenController {
     });
 
     const totalVolume = transactions.reduce(
-      (sum: number, tx: Transaction) =>
-        sum + tx.amount * (tx.pricePerToken || 0),
+      (sum: number, tx: any) => sum + tx.amount * (tx.pricePerToken || 0),
       0
     );
 
     const prices = transactions
-      .filter((tx) => tx.pricePerToken)
-      .map((tx) => tx.pricePerToken!);
+      .filter((tx: any) => tx.pricePerToken)
+      .map((tx: any) => tx.pricePerToken!);
+
     const avgPrice =
       prices.length > 0
         ? prices.reduce((sum: number, price: number) => sum + price, 0) /

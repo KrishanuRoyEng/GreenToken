@@ -1,12 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { logger } from '../utils/logger';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import { validateUserRegistration, validateUserLogin } from '../utils/validation';
-
-const prisma = new PrismaClient();
+import PrismaClientSingleton from '../lib/prisma';
 
 export class AuthController {
   register = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
@@ -16,6 +14,9 @@ export class AuthController {
     }
 
     const { email, password, name, organizationName, role } = value;
+
+    // Get Prisma client lazily
+    const prisma = await PrismaClientSingleton.getInstance();
 
     // Check if user exists
     const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -69,6 +70,9 @@ export class AuthController {
 
     const { email, password } = value;
 
+    // Get Prisma client lazily
+    const prisma = await PrismaClientSingleton.getInstance();
+
     // Find user
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
@@ -108,6 +112,8 @@ export class AuthController {
 
   getProfile = asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user.id;
+    // Get Prisma client lazily
+    const prisma = await PrismaClientSingleton.getInstance();
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -136,6 +142,8 @@ export class AuthController {
   updateProfile = asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user.id;
     const { name, organizationName, walletAddress } = req.body;
+    // Get Prisma client lazily
+    const prisma = await PrismaClientSingleton.getInstance();
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },

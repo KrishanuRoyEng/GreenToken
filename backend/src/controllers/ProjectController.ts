@@ -1,16 +1,19 @@
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { logger } from '../utils/logger';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import { validateProjectData } from '../utils/validation';
 import { CARBON_CREDIT_RATES, PROJECT_STATUS } from '../utils/constants';
 import { io } from '../app';
+import PrismaClientSingleton from '../lib/prisma';
 
-const prisma = new PrismaClient();
 
 export class ProjectController {
   createProject = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     const { error, value } = validateProjectData(req.body);
+    
+    // Get Prisma client lazily
+    const prisma = await PrismaClientSingleton.getInstance();
+
     if (error) {
       return next(createError(error.details[0].message, 400));
     }
@@ -54,6 +57,8 @@ export class ProjectController {
 
   getUserProjects = asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user.id;
+    // Get Prisma client lazily
+    const prisma = await PrismaClientSingleton.getInstance();
     
     const projects = await prisma.project.findMany({
       where: { ownerId: userId },
@@ -70,6 +75,9 @@ export class ProjectController {
 
   getAllProjects = asyncHandler(async (req: Request, res: Response) => {
     const { status, ecosystemType, page = 1, limit = 10 } = req.query;
+
+    // Get Prisma client lazily
+    const prisma = await PrismaClientSingleton.getInstance();
     
     const where: any = {};
     if (status) where.status = status;
@@ -106,6 +114,9 @@ export class ProjectController {
   getProject = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
 
+    // Get Prisma client lazily
+    const prisma = await PrismaClientSingleton.getInstance();
+
     const project = await prisma.project.findUnique({
       where: { id },
       include: {
@@ -140,6 +151,9 @@ export class ProjectController {
     const { id } = req.params;
     const userId = req.user.id;
     const { name, description, location } = req.body;
+
+    // Get Prisma client lazily
+    const prisma = await PrismaClientSingleton.getInstance();
 
     // Check if project exists and user owns it
     const existingProject = await prisma.project.findFirst({
@@ -178,6 +192,9 @@ export class ProjectController {
 
   approveProject = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
+
+    // Get Prisma client lazily
+    const prisma = await PrismaClientSingleton.getInstance();
     
     const project = await prisma.project.findUnique({
       where: { id },
@@ -227,6 +244,9 @@ export class ProjectController {
   rejectProject = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     const { reason } = req.body;
+
+    // Get Prisma client lazily
+    const prisma = await PrismaClientSingleton.getInstance();
     
     const project = await prisma.project.findUnique({
       where: { id },
