@@ -8,7 +8,6 @@
     "build": "tsc",
     "postinstall": "prisma generate",
     "start": "node dist/index.js",
-    "postinstall": "prisma generate || echo 'Prisma generate failed, will retry at runtime'",
     "prebuild": "prisma generate || echo 'Prisma generate failed during prebuild'",
     "migrate": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
@@ -50,7 +49,7 @@
     "ts-node": "^10.9.1",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.0.0",
-    "uuid": "^13.0.0",
+    "uuid": "^8.3.2",
     "web3": "^4.0.0",
     "winston": "^3.17.0"
   },
