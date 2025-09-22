@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
-    "postinstall": "prisma generate",
     "start": "node dist/index.js",
+    "postinstall": "prisma generate || echo 'Prisma generate failed, will retry at runtime'",
     "prebuild": "prisma generate || echo 'Prisma generate failed during prebuild'",
     "migrate": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
