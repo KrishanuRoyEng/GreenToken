@@ -1,46 +1,35 @@
-FROM node:18-alpine
+# Use a Debian-based image for better compatibility with Prisma's binaries
+FROM node:18-slim
 
+# Set the working directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apk add --no-cache bash curl
+# Install necessary system dependencies, including OpenSSL
+RUN apt-get update && apt-get install -y openssl bash curl
 
-# Copy package files first (for better caching)
+# Copy package files for dependency caching
 COPY package*.json ./
 
-# Install dependencies
+# Install npm dependencies
 RUN npm install
 
-# Copy prisma schema early
+# Copy Prisma schema
 COPY prisma ./prisma/
 
-# Try to generate Prisma client during build (but don't fail)
-RUN npx prisma generate || echo "⚠️ Prisma generate failed during build, will retry at runtime"
+# Generate Prisma Client. The build will now fail if this step fails.
+RUN npx prisma generate
 
-# Copy source code
+# Copy the rest of your application code
 COPY . .
 
-# Build TypeScript
+# Build your TypeScript project
 RUN npm run build
 
-# Copy startup script and make it executable
+# Copy and make the startup script executable
 COPY startup.sh ./startup.sh
 RUN chmod +x ./startup.sh
 
-# Create directories
-RUN mkdir -p /app/uploads /app/logs
-
-# Verify build
-RUN echo "📋 Build verification:" && \
-    ls -la dist/ && \
-    ls -la prisma/ && \
-    ls -la startup.sh && \
-    echo "✅ Build complete"
-
-# Verify Prisma client exists in final image
-RUN ls -la node_modules/.prisma/client/ && echo "✅ Prisma client ready!"
-
 EXPOSE 5000
 
-# Use the startup script
+# Run the startup script when the container launches
 CMD ["./startup.sh"]
