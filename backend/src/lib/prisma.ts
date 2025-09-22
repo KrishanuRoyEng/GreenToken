@@ -1,5 +1,5 @@
 // backend/src/lib/prisma.ts
-import { PrismaClient } from '../../prisma/migrations/prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { logger } from '../utils/logger';
 
 class PrismaClientSingleton {
