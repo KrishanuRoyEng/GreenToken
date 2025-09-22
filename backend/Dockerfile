@@ -37,6 +37,9 @@ RUN echo "📋 Build verification:" && \
     ls -la startup.sh && \
     echo "✅ Build complete"
 
+# Verify Prisma client exists in final image
+RUN ls -la node_modules/.prisma/client/ && echo "✅ Prisma client ready!"
+
 EXPOSE 5000
 
 # Use the startup script
