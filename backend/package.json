@@ -7,11 +7,17 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "postinstall": "prisma generate || echo 'Prisma generate failed, will retry at runtime'",
+    "prebuild": "prisma generate || echo 'Prisma generate failed during prebuild'",
     "migrate": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
     "generate": "prisma generate",
     "deploy:contracts": "npx hardhat run scripts/deploy.ts --network polygon",
     "test": "jest",
     "test:watch": "jest --watch"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.0.0",
@@ -38,9 +44,9 @@
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.0",
     "prisma": "^5.0.0",
-    "react-router-dom": "^7.9.1",
     "redis": "^4.6.0",
     "socket.io": "^4.7.0",
+    "ts-node": "^10.9.1",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.0.0",
     "uuid": "^13.0.0",

@@ -1,13 +1,21 @@
-# backend/Dockerfile
 FROM node:18-alpine
 
 WORKDIR /app
 
-# Copy package files
+# Install system dependencies
+RUN apk add --no-cache bash curl
+
+# Copy package files first (for better caching)
 COPY package*.json ./
 
-# Install production dependencies only
-RUN npm install --omit=dev
+# Install dependencies
+RUN npm install
+
+# Copy prisma schema early
+COPY prisma ./prisma/
+
+# Try to generate Prisma client during build (but don't fail)
+RUN npx prisma generate || echo "⚠️ Prisma generate failed during build, will retry at runtime"
 
 # Copy source code
 COPY . .
@@ -15,9 +23,21 @@ COPY . .
 # Build TypeScript
 RUN npm run build
 
-# Generate Prisma client
-RUN npx prisma generate
+# Copy startup script and make it executable
+COPY startup.sh ./startup.sh
+RUN chmod +x ./startup.sh
+
+# Create directories
+RUN mkdir -p /app/uploads /app/logs
+
+# Verify build
+RUN echo "📋 Build verification:" && \
+    ls -la dist/ && \
+    ls -la prisma/ && \
+    ls -la startup.sh && \
+    echo "✅ Build complete"
 
 EXPOSE 5000
 
-CMD ["npm", "start"]
+# Use the startup script
+CMD ["./startup.sh"]
