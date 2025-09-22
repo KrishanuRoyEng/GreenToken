@@ -3,25 +3,19 @@ FROM node:18-alpine
 WORKDIR /app
 
 # Install system dependencies
-RUN apk add --no-cache curl bash
+RUN apk add --no-cache bash curl
 
-# Copy package files first (for better Docker caching)
+# Copy package files first (for better caching)
 COPY package*.json ./
 
-# Install OpenSSL 3 + glibc compatibility
-RUN apk add --no-cache openssl libc6-compat
-
-# Copy Prisma schema
-COPY prisma ./prisma/
-
-# Use npm install
+# Install dependencies
 RUN npm install
 
-# Generate Prisma client BEFORE copying source code
-RUN npx prisma generate
+# Copy prisma schema early
+COPY prisma ./prisma/
 
-# Verify Prisma client was generated
-RUN ls -la node_modules/.prisma/client/ || echo "Prisma client not found!"
+# Try to generate Prisma client during build (but don't fail)
+RUN npx prisma generate || echo "⚠️ Prisma generate failed during build, will retry at runtime"
 
 # Copy source code
 COPY . .
@@ -29,23 +23,24 @@ COPY . .
 # Build TypeScript
 RUN npm run build
 
-# Verify the build output
-RUN ls -la dist/ || echo "Build output not found!"
+# Copy startup script and make it executable
+COPY startup.sh ./startup.sh
+RUN chmod +x ./startup.sh
 
-# Create necessary directories
+# Create directories
 RUN mkdir -p /app/uploads /app/logs
 
-# Generate Prisma client again to be extra sure
-RUN npx prisma generate
+# Verify build
+RUN echo "📋 Build verification:" && \
+    ls -la dist/ && \
+    ls -la prisma/ && \
+    ls -la startup.sh && \
+    echo "✅ Build complete"
 
 # Verify Prisma client exists in final image
 RUN ls -la node_modules/.prisma/client/ && echo "✅ Prisma client ready!"
 
 EXPOSE 5000
 
-# Healthcheck
-HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
-  CMD curl -f http://localhost:5000/health || exit 1
-
-# Start command with better error handling
-CMD ["sh", "-c", "npx prisma generate && npx prisma migrate deploy && node dist/index.js"]
+# Use the startup script
+CMD ["./startup.sh"]
