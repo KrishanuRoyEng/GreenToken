@@ -16,6 +16,7 @@ import LoadingSpinner from './components/common/LoadingSpinner';
 import { apiService } from './services/api';
 
 function App() {
+  console.log('The app is using API URL:', import.meta.env.VITE_API_URL);
   const { isLoading } = useAuth();
 
   // Test the API connection when the app loads
