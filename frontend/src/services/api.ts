@@ -1,7 +1,8 @@
 import axios, { AxiosInstance } from "axios";
 
+// Change the base URL to NOT include the /api prefix
 const API_BASE_URL =
-  import.meta.env.REACT_APP_API_URL || "http://localhost:5000/api";
+  import.meta.env.REACT_APP_API_URL || "http://localhost:5000";
 
 class ApiService {
   private api: AxiosInstance;
@@ -48,74 +49,88 @@ class ApiService {
   }
   // Auth methods
   async login(email: string, password: string) {
-    const response = await this.api.post("/auth/login", { email, password });
+    // Add /api prefix to each call
+    const response = await this.api.post("/api/auth/login", { email, password });
     return response.data;
   }
 
   async register(userData: any) {
-    const response = await this.api.post("/auth/register", userData);
+    // Add /api prefix to each call
+    const response = await this.api.post("/api/auth/register", userData);
     return response.data;
   }
 
   async getProfile() {
-    const response = await this.api.get("/auth/profile");
+    // Add /api prefix to each call
+    const response = await this.api.get("/api/auth/profile");
     return response.data;
   }
 
   async updateProfile(data: any) {
-    const response = await this.api.put("/auth/profile", data);
+    // Add /api prefix to each call
+    const response = await this.api.put("/api/auth/profile", data);
     return response.data;
   }
 
   // Project methods
   async getProjects(filters?: any) {
-    const response = await this.api.get("/projects", { params: filters });
+    // Add /api prefix to each call
+    const response = await this.api.get("/api/projects", { params: filters });
     return response.data;
   }
 
   async getUserProjects() {
-    const response = await this.api.get("/projects/user");
+    // Add /api prefix to each call
+    const response = await this.api.get("/api/projects/user");
     return response.data;
   }
 
   async getProject(id: string) {
-    const response = await this.api.get(`/projects/${id}`);
+    // Add /api prefix to each call
+    const response = await this.api.get(`/api/projects/${id}`);
     return response.data;
   }
 
   async createProject(projectData: any) {
-    const response = await this.api.post("/projects", projectData);
+    // Add /api prefix to each call
+    const response = await this.api.post("/api/projects", projectData);
     return response.data;
   }
 
   async updateProject(id: string, data: any) {
-    const response = await this.api.put(`/projects/${id}`, data);
+    // Add /api prefix to each call
+    const response = await this.api.put(`/api/projects/${id}`, data);
     return response.data;
   }
 
   async approveProject(id: string) {
-    const response = await this.api.post(`/projects/${id}/approve`);
+    // Add /api prefix to each call
+    const response = await this.api.post(`/api/projects/${id}/approve`);
     return response.data;
   }
 
   async rejectProject(id: string, reason?: string) {
-    const response = await this.api.post(`/projects/${id}/reject`, { reason });
+    // Add /api prefix to each call
+    const response = await this.api.post(`/api/projects/${id}/reject`, { reason });
     return response.data;
   }
 
   // Token methods
   async getUserTokens() {
-    const response = await this.api.get("/tokens/balance");
+    // Add /api prefix to each call
+    const response = await this.api.get("/api/tokens/balance");
     return response.data;
   }
 
   async buyTokens(amount: number) {
-    const response = await this.api.post("/tokens/buy", { amount });
+    // Add /api prefix to each call
+    const response = await this.api.post("/api/tokens/buy", { amount });
     return response.data;
   }
 
   async sellTokens(amount: number, pricePerToken: number) {
-    const response = await this.api.post("/tokens/sell", {
+    // Add /api prefix to each call
+    const response = await this.api.post("/api/tokens/sell", {
       amount,
       pricePerToken,
     });
@@ -123,48 +138,56 @@ class ApiService {
   }
 
   async getMarketplace(params?: any) {
-    const response = await this.api.get("/tokens/marketplace", { params });
+    // Add /api prefix to each call
+    const response = await this.api.get("/api/tokens/marketplace", { params });
     return response.data;
   }
 
   async purchaseFromMarketplace(orderId: string) {
+    // Add /api prefix to each call
     const response = await this.api.post(
-      `/tokens/marketplace/${orderId}/purchase`
+      `/api/tokens/marketplace/${orderId}/purchase`
     );
     return response.data;
   }
 
   // Admin methods
   async getSystemStats() {
-    const response = await this.api.get("/admin/stats");
+    // Add /api prefix to each call
+    const response = await this.api.get("/api/admin/stats");
     return response.data;
   }
 
   async getAllUsers(params?: any) {
-    const response = await this.api.get("/admin/users", { params });
+    // Add /api prefix to each call
+    const response = await this.api.get("/api/admin/users", { params });
     return response.data;
   }
 
   async updateUserRole(userId: string, role: string) {
-    const response = await this.api.put(`/admin/users/${userId}/role`, {
+    // Add /api prefix to each call
+    const response = await this.api.put(`/api/admin/users/${userId}/role`, {
       role,
     });
     return response.data;
   }
 
   async verifyUser(userId: string) {
-    const response = await this.api.post(`/admin/users/${userId}/verify`);
+    // Add /api prefix to each call
+    const response = await this.api.post(`/api/admin/users/${userId}/verify`);
     return response.data;
   }
 
   async getPendingApprovals() {
-    const response = await this.api.get("/admin/projects/pending");
+    // Add /api prefix to each call
+    const response = await this.api.get("/api/admin/projects/pending");
     return response.data;
   }
 
   async issueCredits(projectId: string, amount: number, verificationData: any) {
+    // Add /api prefix to each call
     const response = await this.api.post(
-      `/admin/projects/${projectId}/issue-credits`,
+      `/api/admin/projects/${projectId}/issue-credits`,
       {
         amount,
         verificationData,
@@ -179,7 +202,7 @@ class ApiService {
     formData.append("file", file);
     if (projectId) formData.append("projectId", projectId);
 
-    const response = await this.api.post("/uploads", formData, {
+    const response = await this.api.post("/api/uploads", formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
