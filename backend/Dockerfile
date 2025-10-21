@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y openssl bash curl
 COPY package*.json ./
 
 # Install npm dependencies
-RUN npm install
+RUN npm install --include=dev
 
 # Copy Prisma schema
 COPY prisma ./prisma/
