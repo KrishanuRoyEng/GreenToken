@@ -1,5 +1,5 @@
 # Use a Debian-based image for better compatibility with Prisma's binaries
-FROM node:18-slim
+FROM node:22-slim
 
 # Set the working directory
 WORKDIR /app
@@ -25,11 +25,7 @@ COPY . .
 # Build your TypeScript project
 RUN npm run build
 
-# Copy and make the startup script executable
-COPY startup.sh ./startup.sh
-RUN chmod +x ./startup.sh
-
 EXPOSE 5000
 
-# Run the startup script when the container launches
-CMD ["./startup.sh"]
+# Run migrations and start the server
+CMD npx prisma migrate deploy && npx prisma db seed && node dist/index.js

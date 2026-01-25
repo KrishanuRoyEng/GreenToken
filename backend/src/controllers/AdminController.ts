@@ -3,12 +3,13 @@ import { logger } from "../utils/logger";
 import { asyncHandler, createError } from "../middleware/errorHandler";
 import { validateCreditIssuance } from "../utils/validation";
 import { io } from "../app";
+import { ipfsService } from "../services/IPFSService";
+import { notificationService } from "../services";
 import PrismaClientSingleton from "../lib/prisma";
 
 export class AdminController {
   getSystemStats = asyncHandler(async (req: Request, res: Response) => {
 
-    //lazy initialization
     const prisma = await PrismaClientSingleton.getInstance();
     const [
       totalUsers,
@@ -64,7 +65,7 @@ export class AdminController {
 
   getAllUsers = asyncHandler(async (req: Request, res: Response) => {
 
-    //lazy initialization
+
     const prisma = await PrismaClientSingleton.getInstance();
 
     const { page = 1, limit = 20, role, search } = req.query;
@@ -116,10 +117,9 @@ export class AdminController {
   updateUserRole = asyncHandler(
     async (req: Request, res: Response, next: NextFunction) => {
 
-      //lazy initialization
       const prisma = await PrismaClientSingleton.getInstance();
 
-      const { userId } = req.params;
+      const userId = req.params.userId as string;
       const { role } = req.body;
 
       const validRoles = [
@@ -165,10 +165,9 @@ export class AdminController {
   verifyUser = asyncHandler(
     async (req: Request, res: Response, next: NextFunction) => {
 
-      //lazy initialization
       const prisma = await PrismaClientSingleton.getInstance();
 
-      const { userId } = req.params;
+      const userId = req.params.userId as string;
 
       const user = await prisma.user.findUnique({ where: { id: userId } });
       if (!user) {
@@ -181,14 +180,7 @@ export class AdminController {
       });
 
       // Create notification for user
-      await prisma.notification.create({
-        data: {
-          title: "Account Verified",
-          message: "Your account has been verified by administrators",
-          type: "success",
-          userId,
-        },
-      });
+      await notificationService.notifyAccountVerified(userId, user.email);
 
       logger.info(`User verified: ${user.email} by ${req.user.email}`);
 
@@ -201,10 +193,9 @@ export class AdminController {
   issueCredits = asyncHandler(
     async (req: Request, res: Response, next: NextFunction) => {
 
-      //lazy initialization
       const prisma = await PrismaClientSingleton.getInstance();
 
-      const { projectId } = req.params;
+      const projectId = req.params.projectId as string;
       const { error, value } = validateCreditIssuance(req.body);
 
       if (error) {
@@ -248,15 +239,8 @@ export class AdminController {
         },
       });
 
-      // Create notification for project owner
-      await prisma.notification.create({
-        data: {
-          title: "Credits Issued",
-          message: `${amount} carbon credits have been issued for your project "${project.name}"`,
-          type: "success",
-          userId: project.ownerId,
-        },
-      });
+      // Notify project owner
+      await notificationService.notifyCreditsIssued(project.ownerId, project.owner.email, amount, project.name);
 
       // Notify project owner via socket
       io.to(`user-${project.ownerId}`).emit("credits-issued", {
@@ -281,8 +265,7 @@ export class AdminController {
   );
 
   getPendingApprovals = asyncHandler(async (req: Request, res: Response) => {
-    
-    //lazy initialization
+
     const prisma = await PrismaClientSingleton.getInstance();
 
     const pendingProjects = await prisma.project.findMany({
@@ -300,13 +283,13 @@ export class AdminController {
 
   approveProject = asyncHandler(async (req: Request, res: Response) => {
 
-    //lazy initialization
     const prisma = await PrismaClientSingleton.getInstance();
 
-    const { projectId } = req.params;
+    const projectId = req.params.projectId as string;
 
     const project = await prisma.project.findUnique({
       where: { id: projectId },
+      include: { owner: true }
     });
     if (!project) {
       return res.status(404).json({ error: "Project not found" });
@@ -323,27 +306,20 @@ export class AdminController {
       data: { status: "APPROVED", approvedAt: new Date() },
     });
 
-    await prisma.notification.create({
-      data: {
-        title: "Project Approved",
-        message: `Your project "${project.name}" has been approved`,
-        type: "success",
-        userId: project.ownerId,
-      },
-    });
+    await notificationService.notifyProjectApproved(project.ownerId, project.owner?.email || "", project.name);
 
     return res.json({ project: updatedProject }); // <- explicit return
   });
 
   rejectProject = asyncHandler(async (req: Request, res: Response) => {
 
-    //lazy initialization
     const prisma = await PrismaClientSingleton.getInstance();
-    
-    const { projectId } = req.params;
+
+    const projectId = req.params.projectId as string;
 
     const project = await prisma.project.findUnique({
       where: { id: projectId },
+      include: { owner: true }
     });
     if (!project) {
       return res.status(404).json({ error: "Project not found" });
@@ -360,19 +336,119 @@ export class AdminController {
       data: { status: "REJECTED" },
     });
 
-    // Optionally, notify the project owner
-    await prisma.notification.create({
-      data: {
-        title: "Project Rejected",
-        message: `Your project "${project.name}" has been rejected`,
-        type: "error",
-        userId: project.ownerId,
-      },
-    });
+    await notificationService.notifyProjectRejected(project.ownerId, project.owner?.email || "", project.name, "Rejected by admin");
+
+    await notificationService.notifyProjectRejected(project.ownerId, project.owner?.email || "", project.name, "Rejected by admin");
 
     return res.json({
       project: updatedProject,
       message: "Project rejected successfully",
     });
+  });
+
+  getProjects = asyncHandler(async (req: Request, res: Response) => {
+    const prisma = await PrismaClientSingleton.getInstance();
+
+    const { page = 1, limit = 10, status, search, sort = "desc" } = req.query;
+
+    const where: any = {};
+    if (status) where.status = status;
+    if (search) {
+      where.OR = [
+        { name: { contains: search as string, mode: "insensitive" } },
+        { location: { contains: search as string, mode: "insensitive" } },
+        {
+          owner: {
+            OR: [
+              { name: { contains: search as string, mode: "insensitive" } },
+              { organizationName: { contains: search as string, mode: "insensitive" } },
+            ],
+          },
+        },
+      ];
+    }
+
+    const projects = await prisma.project.findMany({
+      where,
+      include: {
+        owner: { select: { name: true, organizationName: true, email: true } },
+        _count: { select: { documents: true } },
+      },
+      orderBy: { createdAt: sort === "asc" ? "asc" : "desc" },
+      skip: (Number(page) - 1) * Number(limit),
+      take: Number(limit),
+    });
+
+    const total = await prisma.project.count({ where });
+
+    res.json({
+      projects,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / Number(limit)),
+      },
+    });
+  });
+
+  getMapData = asyncHandler(async (req: Request, res: Response) => {
+    const prisma = await PrismaClientSingleton.getInstance();
+
+    // Fetch real projects that are APPROVED or ACTIVE
+    const projects = await prisma.project.findMany({
+      where: {
+        status: { in: ["APPROVED", "ACTIVE", "COMPLETED", "PENDING"] },
+        latitude: { not: 0 }, // Ensure valid coordinates
+        longitude: { not: 0 }
+      },
+      select: {
+        id: true,
+        name: true,
+        ecosystemType: true,
+        location: true,
+        latitude: true,
+        longitude: true,
+        areaHectares: true,
+        issuedCredits: true,
+        estimatedCredits: true,
+        documents: {
+          where: {
+            documentType: { in: ["IMAGE", "DRONE_DATA", "REPORT"] }
+          },
+          select: {
+            id: true,
+            documentType: true,
+            ipfsHash: true,
+            originalName: true
+          }
+        }
+      }
+    });
+
+    // Transform to matching frontend format
+    // Transform to matching frontend format
+    const regions = projects.map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      type: p.ecosystemType,
+      coordinates: [p.latitude, p.longitude],
+      location: p.location,
+      stats: {
+        area: `${p.areaHectares} ha`,
+        health: "Monitoring Active", // Placeholder for real monitoring data logic
+        carbon: `${p.issuedCredits || p.estimatedCredits || 0} credits`
+      },
+      images: p.documents
+        .filter((d: any) => d.documentType === 'IMAGE' && d.ipfsHash)
+        .map((d: any) => ipfsService.getGatewayUrl(d.ipfsHash)),
+      documents: p.documents.map((d: any) => ({
+        type: d.documentType,
+        name: d.originalName,
+        url: d.ipfsHash ? ipfsService.getGatewayUrl(d.ipfsHash) : null
+      }))
+    }));
+
+    res.json(regions);
   });
 }

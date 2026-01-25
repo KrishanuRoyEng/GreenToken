@@ -1,9 +1,14 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import { httpServer } from './app';
+import { httpServer, app } from './app';
 import { logger } from './utils/logger';
 import PrismaClientSingleton from './lib/prisma';
+import express from 'express';
+import path from 'path';
+
+// Serve uploads directory specifically for fallback IPFS files
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 const PORT = process.env.PORT || 5000;
 
@@ -11,7 +16,7 @@ async function startServer() {
   try {
     logger.info('🚀 Starting Blue Carbon MRV Backend...');
     logger.info(`📊 Environment: ${process.env.NODE_ENV}`);
-    
+
     // Don't initialize Prisma here - let it happen lazily on first request
     logger.info('⏳ Prisma client will initialize on first database request');
 

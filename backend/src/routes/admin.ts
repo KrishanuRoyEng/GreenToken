@@ -1,4 +1,4 @@
-import  express, { Router }  from 'express';
+import express, { Router } from 'express';
 import { AdminController } from '../controllers/AdminController';
 import { authenticateToken, requireAdmin, requireVerifier } from '../middleware/auth';
 
@@ -13,6 +13,8 @@ router.get('/stats', requireAdmin, adminController.getSystemStats);
 router.get('/users', requireAdmin, adminController.getAllUsers);
 router.put('/users/:userId/role', requireAdmin, adminController.updateUserRole);
 router.post('/users/:userId/verify', requireAdmin, adminController.verifyUser);
+router.get('/projects', requireAdmin, adminController.getProjects);
+router.get('/map-data', requireAdmin, adminController.getMapData);
 
 // Admin and Verifier routes
 router.get('/projects/pending', requireVerifier, adminController.getPendingApprovals);

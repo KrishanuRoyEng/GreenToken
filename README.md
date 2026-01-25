@@ -1,163 +1,149 @@
 # GreenToken
 ## A Blue Carbon MRV Platform
 
-A full-stack application for managing blue carbon projects, monitoring carbon credits, and enabling a tokenized marketplace for verified environmental projects. This platform allows users, NGOs, researchers, and verifiers to collaborate and track environmental impact while facilitating carbon credit issuance and trading.
+A full-stack application for managing blue carbon projects, monitoring carbon credits, and enabling a tokenized marketplace for verified environmental projects.
 
 ---
 
-## Table of Contents
+## Quick Start
 
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Setup Instructions](#setup-instructions)
-- [Project Structure](#project-structure)
-- [API Endpoints](#api-endpoints)
-- [Environment Variables](#environment-variables)
-- [Future Improvements](#future-improvements)
-- [License](#license)
+### Prerequisites
+
+- Node.js v18+
+- Docker & Docker Compose
+- npm or pnpm
+
+### Setup
+
+```bash
+# 1. Clone and enter the repository
+git clone <repo-url>
+cd greentoken
+
+# 2. Run the setup script
+./scripts/setup.sh
+
+# 3. Start development
+npm run dev
+```
+
+The setup script will:
+- Install all dependencies
+- Create `.env` file from `.env.example`
+- Start PostgreSQL, Redis, and IPFS containers
+- Run database migrations and seed data
 
 ---
 
-## Features
+## Development
 
-### User Roles
+### Commands
 
-- **Admin**: Manage users, approve/reject projects, issue carbon credits.
-- **Verifier**: Review pending projects and validate submissions.
-- **NGO / Community / Researcher**: Submit projects, view token balances, participate in marketplace.
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start both frontend and backend |
+| `npm run backend:dev` | Start backend only |
+| `npm run frontend:dev` | Start frontend only |
+| `./scripts/setup.sh` | Full project setup |
+| `./scripts/stop.sh` | Stop all services |
+| `./scripts/deploy.sh` | Production deployment |
+| `./scripts/clean.sh` | Full cleanup |
+| `./scripts/backup.sh` | Backup database and files |
 
-### Core Functionalities
+### Services
 
-- Project creation, viewing, and management
-- Carbon credit issuance and tracking
-- Token marketplace for carbon credits
-- Dashboard with system overview and user stats
-- Admin panel with project approval workflow and user management
-- Real-time notifications via WebSockets
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:3000 |
+| Backend API | http://localhost:5000 |
+| IPFS Gateway | http://localhost:8080 |
+| PostgreSQL | localhost:5432 |
+| Redis | localhost:6379 |
+
+### Default Credentials
+
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | admin@nccr.gov.in | admin123 |
+| NGO | ngo@example.org | ngo123 |
+| Panchayat | panchayat@village.gov.in | panchayat123 |
+
+---
+
+## Project Structure
+
+```
+greentoken/
+├── .env.example        # All environment variables (copy to .env)
+├── docker-compose.yml  # Container orchestration
+├── backend/
+│   ├── Dockerfile
+│   ├── src/            # Express API, controllers, routes
+│   └── prisma/         # Database schema and migrations
+├── frontend/
+│   ├── Dockerfile
+│   └── src/            # React + Vite app
+└── scripts/
+    ├── setup.sh        # Initial setup
+    ├── dev.sh          # Start development
+    ├── stop.sh         # Stop services
+    ├── deploy.sh       # Production deployment
+    ├── clean.sh        # Full cleanup
+    └── backup.sh       # Backup utility
+```
+
+---
+
+## Environment Configuration
+
+All environment variables are consolidated in a single `.env.example` file at the project root.
+
+```bash
+# Copy and configure
+cp .env.example .env
+```
+
+Key variables:
+- `POSTGRES_*` - Database configuration
+- `JWT_SECRET` - Authentication secret
+- `VITE_*` - Frontend configuration
+- `BLOCKCHAIN_RPC_URL` - (Optional) For smart contract integration
+
+---
+
+## Docker
+
+### Development (with hot-reload)
+
+```bash
+# Start infrastructure only
+docker-compose up -d postgres redis ipfs
+
+# Run apps locally
+npm run dev
+```
+
+### Full Docker Stack
+
+```bash
+# Build and run everything
+docker-compose up --build
+
+# Or use deploy script
+./scripts/deploy.sh
+```
 
 ---
 
 ## Tech Stack
 
-**Frontend:**
-
-- React + TypeScript
-- Vite
-- Tailwind CSS
-- Lucide-react for icons
-- React Hot Toast for notifications
-
-**Backend:**
-
-- Node.js + Express
-- TypeScript
-- Prisma ORM + PostgreSQL
-- JWT-based authentication
-- Socket.IO for real-time notifications
-
-**Other:**
-
-- Axios for API requests
-- Form validation using custom utilities
-- File uploads (project images/documents)
+**Frontend:** React, TypeScript, Vite, Tailwind CSS, Lucide-react  
+**Backend:** Node.js, Express, TypeScript, Prisma ORM, Socket.IO  
+**Database:** PostgreSQL, Redis  
+**Storage:** IPFS
 
 ---
 
-## Setup Instructions
+## License
 
-### Prerequisites
-
-- Node.js v18+
-- PostgreSQL or any relational DB
-- pnpm or npm
-
-### Backend Setup
-
-1. Clone the repository:
-
-```bash
-git clone <repo-url>
-cd blue-carbon-mrv/backend
-```
-
-2. Install dependencies:
-```bash
-pnpm install
-```
-
-3. Configure enviroment variables `.env`
-```bash
-DATABASE_URL=postgresql://user:password@localhost:5432/bluecarbon
-JWT_SECRET=your_jwt_secret
-PORT=5000
-```
-
-4. Run Prisma Migration
-```bash
-npx prisma migrate dev --name init
-```
-
-5. Start the backend
-```bash
-pnpm run dev
-```
-
-### Frontend Setup
-
-1. Go to frontend folder
-```bash
-cd ../frontend
-```
-
-2. Install dependencies
-pnpm install
-
-3. Create `.env` in frontend:
-```bash
-VITE_REACT_APP_API_URL = http://localhost:5000/api
-```
-
-4. Start the frontend
-```bash
-pnpm dev
-```
-
-### Project Structure
-```bash
-backend/
-├─ controllers/       # API controllers (AdminController, ProjectController)
-├─ middleware/        # Auth, error handling, validation
-├─ routes/            # Express routes
-├─ prisma/            # Prisma client & schema
-├─ utils/             # Logging, validation utilities
-frontend/
-├─ src/
-│  ├─ components/    # React components (common, project, token)
-│  ├─ contexts/      # AuthContext
-│  ├─ hooks/         # useProjects, useTokens
-│  ├─ pages/         # Dashboard, Admin
-│  ├─ services/      # api.ts service layer
-│  └─ App.tsx
-```
-
-### API Endpoints
-
-## Admin
-
-## Projects
-
-## Tokens/Marketplace
-
-
-###  Future Improvements
-
--Add full CRUD for projects from admin panel
--Implement advanced marketplace filtering
--Add notifications for token transactions
--Integration with smart contracts(payment gateway) for real carbon token issuance
--Improved analytics dashboard
--Allow custom wallets for seller/buyer
-
-
-### License
 MIT License © 2025

@@ -1,4 +1,3 @@
-import { useEffect } from 'react'; // Import useEffect
 import { Routes, Route } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import Layout from './components/layout/Layout';
@@ -12,31 +11,12 @@ import NotFound from './pages/NotFound';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import LoadingSpinner from './components/common/LoadingSpinner';
 
-// Import your apiService
-import { apiService } from './services/api';
-
 function App() {
-  console.log('The app is using API URL:', import.meta.env.VITE_API_URL);
   const { isLoading } = useAuth();
-
-  // Test the API connection when the app loads
-  useEffect(() => {
-    const testApiConnection = async () => {
-      try {
-        // Use a simple API call that doesn't require authentication, like a health check
-        const response = await apiService.get('/health');
-        console.log('✅ API connection successful! Response:', response.data);
-      } catch (error) {
-        console.error('❌ API connection failed. Error:', error);
-      }
-    };
-
-    testApiConnection();
-  }, []);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
         <LoadingSpinner size="large" />
       </div>
     );
@@ -46,45 +26,45 @@ function App() {
     <Routes>
       <Route path="/" element={<Layout />}>
         <Route index element={<Home />} />
-        <Route 
-          path="/dashboard" 
+        <Route
+          path="/dashboard"
           element={
             <ProtectedRoute>
               <Dashboard />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/projects" 
+        <Route
+          path="/projects"
           element={
             <ProtectedRoute>
               <Projects />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/marketplace" 
+        <Route
+          path="/marketplace"
           element={
             <ProtectedRoute>
               <Marketplace />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/profile" 
+        <Route
+          path="/profile"
           element={
             <ProtectedRoute>
               <Profile />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/admin" 
+        <Route
+          path="/admin"
           element={
             <ProtectedRoute requiredRole="ADMIN">
               <Admin />
             </ProtectedRoute>
-          } 
+          }
         />
       </Route>
       <Route path="*" element={<NotFound />} />

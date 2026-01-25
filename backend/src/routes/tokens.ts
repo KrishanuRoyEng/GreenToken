@@ -12,6 +12,7 @@ router.get('/balance', tokenController.getUserTokens);
 router.post('/buy', tokenController.buyTokens);
 router.post('/sell', tokenController.sellTokens);
 router.get('/marketplace', tokenController.getMarketplace);
+router.get('/marketplace/my-listings', tokenController.getUserListings);
 router.post('/marketplace/:orderId/purchase', tokenController.purchaseFromMarketplace);
 
 export default router;

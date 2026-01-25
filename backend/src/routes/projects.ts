@@ -8,11 +8,15 @@ const projectController = new ProjectController();
 // All routes require authentication
 router.use(authenticateToken);
 
+// User project routes
 router.get('/', projectController.getAllProjects);
 router.post('/', projectController.createProject);
 router.get('/user', projectController.getUserProjects);
 router.get('/:id', projectController.getProject);
 router.put('/:id', projectController.updateProject);
+
+// Finalize project (validates images, uploads to IPFS)
+router.post('/:id/finalize', projectController.finalizeProject);
 
 // Admin/Verifier only routes
 router.post('/:id/approve', requireVerifier, projectController.approveProject);

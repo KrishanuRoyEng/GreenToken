@@ -15,6 +15,8 @@ enum UserRole {
   RESEARCHER
   ADMIN
   VERIFIER
+  PRIVATE_ENTITY
+  COMPANY
 }
 
 enum ProjectStatus {
@@ -32,21 +34,58 @@ enum EcosystemType {
   KELP
 }
 
+enum DocumentType {
+  IMAGE
+  DRONE_DATA
+  REPORT
+  OTHER
+}
+
+enum PayoutMethod {
+  CRYPTO
+  BANK_TRANSFER
+  UPI
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  RAZORPAY
+  UPI
+  CRYPTO
+}
+
 model User {
-  id                String    @id @default(cuid())
-  email             String    @unique
-  passwordHash      String
-  name              String
-  organizationName  String?
-  role              UserRole  @default(NGO)
-  walletAddress     String?   @unique
-  isVerified        Boolean   @default(false)
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  id                   String    @id @default(cuid())
+  email                String    @unique
+  passwordHash         String
+  name                 String
+  organizationName     String?
+  role                 UserRole  @default(NGO)
+  walletAddress        String?   @unique
+  usesCustodianWallet  Boolean   @default(true)
+  custodianWalletIndex Int?      // HD wallet derivation index
+  isVerified           Boolean   @default(false)
+  
+  // Payout preferences
+  payoutMethod         PayoutMethod @default(CRYPTO)
+  bankAccountName      String?
+  bankAccountNumber    String?   @db.VarChar(255)
+  bankIfsc             String?
+  upiId                String?
+  
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   projects          Project[]
   transactions      Transaction[]
   notifications     Notification[]
+  payments          Payment[]
 
   @@map("users")
 }
@@ -62,9 +101,12 @@ model Project {
   ecosystemType     EcosystemType
   status            ProjectStatus   @default(PENDING)
   blockchainId      Int?            @unique
-  ipfsHash          String?
+  ipfsHash          String?         // Legacy field
+  ipfsMetadataHash  String?         // Full project metadata CID
+  dataHash          String?         // SHA-256 hash of project data
   estimatedCredits  Int?
   issuedCredits     Int             @default(0)
+  rejectionReason   String?         // Reason if rejected
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
   approvedAt        DateTime?
@@ -80,16 +122,18 @@ model Project {
 }
 
 model Document {
-  id          String   @id @default(cuid())
-  filename    String
-  originalName String
-  mimeType    String
-  size        Int
-  ipfsHash    String?
-  uploadedAt  DateTime @default(now())
+  id            String       @id @default(cuid())
+  filename      String
+  originalName  String
+  mimeType      String
+  size          Int
+  ipfsHash      String?      // CID of file on IPFS
+  documentType  DocumentType @default(IMAGE)
+  isRequired    Boolean      @default(false)
+  uploadedAt    DateTime     @default(now())
   
-  project     Project  @relation(fields: [projectId], references: [id])
-  projectId   String
+  project       Project      @relation(fields: [projectId], references: [id])
+  projectId     String
 
   @@map("documents")
 }
@@ -140,4 +184,25 @@ model Notification {
   userId    String
 
   @@map("notifications")
+}
+
+model Payment {
+  id                 String        @id @default(cuid())
+  orderId            String        @unique
+  amount             Float
+  currency           String        @default("INR")
+  status             PaymentStatus @default(PENDING)
+  paymentMethod      PaymentMethod @default(RAZORPAY)
+  razorpayOrderId    String?       @unique
+  razorpayPaymentId  String?
+  cryptoTxHash       String?
+  metadata           Json?
+  completedAt        DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  
+  user               User          @relation(fields: [userId], references: [id])
+  userId             String
+
+  @@map("payments")
 }

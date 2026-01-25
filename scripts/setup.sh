@@ -131,25 +131,21 @@ print_status "Setting up environment files..."
 if [ ! -f .env ]; then
     if [ -f .env.example ]; then
         cp .env.example .env
-        print_success "Created root .env file"
+        print_success "Created .env file from .env.example"
     else
-        print_warning ".env.example not found, creating basic .env"
-        cat > .env << EOF
-NODE_ENV=development
-DATABASE_URL=postgresql://postgres:password123@localhost:5432/blue_carbon_mrv
-EOF
+        print_error ".env.example not found. Cannot continue."
+        exit 1
     fi
 else
-    print_warning "Root .env file already exists"
+    print_warning ".env file already exists"
 fi
 
+# For local (non-Docker) development, create env files in subdirectories
+# These are needed when running npm run dev outside of Docker
 if [ ! -f backend/.env ]; then
-    if [ -f backend/.env.example ]; then
-        cp backend/.env.example backend/.env
-        print_success "Created backend .env file"
-    else
-        print_warning "backend/.env.example not found, creating basic backend/.env"
-        cat > backend/.env << EOF
+    cat > backend/.env << EOF
+# Backend environment (inherits from root .env in Docker)
+# For local development without Docker
 NODE_ENV=development
 PORT=5000
 DATABASE_URL=postgresql://postgres:password123@localhost:5432/blue_carbon_mrv
@@ -160,25 +156,20 @@ IPFS_HOST=localhost
 IPFS_PORT=5001
 IPFS_PROTOCOL=http
 EOF
-    fi
-else
-    print_warning "Backend .env file already exists"
+    print_success "Created backend/.env for local development"
 fi
 
 if [ ! -f frontend/.env ]; then
-    if [ -f frontend/.env.example ]; then
-        cp frontend/.env.example frontend/.env
-        print_success "Created frontend .env file"
-    else
-        print_warning "frontend/.env.example not found, creating basic frontend/.env"
-        cat > frontend/.env << EOF
-REACT_APP_API_URL=http://localhost:5000/api
-REACT_APP_WS_URL=ws://localhost:5000
-REACT_APP_IPFS_GATEWAY=http://localhost:8080/ipfs
+    cat > frontend/.env << EOF
+# Frontend environment (inherits from root .env in Docker)
+# For local development without Docker
+VITE_API_URL=http://localhost:5000
+VITE_WS_URL=ws://localhost:5000
+VITE_IPFS_GATEWAY=http://localhost:8080/ipfs
+VITE_APP_NAME=GreenToken
+VITE_VERSION=1.0.0
 EOF
-    fi
-else
-    print_warning "Frontend .env file already exists"
+    print_success "Created frontend/.env for local development"
 fi
 
 # Create uploads directory

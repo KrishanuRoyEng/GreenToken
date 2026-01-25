@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
-import { X } from 'lucide-react';
+import { Modal } from '../ui';
+import { Input } from '../ui/Input';
 import Button from '../common/Button';
+import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
 interface LoginFormProps {
@@ -10,110 +11,66 @@ interface LoginFormProps {
 }
 
 const LoginForm: React.FC<LoginFormProps> = ({ onClose, onSwitchToRegister }) => {
-  const { login, error, clearError } = useAuth();
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
-  const [loading, setLoading] = useState(false);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    if (error) clearError();
-  };
+  const { login, isLoading } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loading) return;
 
-    setLoading(true);
+    if (!email || !password) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+
     try {
-      await login(formData.email, formData.password);
-      toast.success('Login successful!');
+      await login(email, password);
+      toast.success('Welcome back!');
       onClose();
-    } catch (error) {
-      // Error is handled by context
-    } finally {
-      setLoading(false);
+    } catch {
+      toast.error('Invalid email or password');
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-md w-full p-6 relative">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-        >
-          <X className="h-5 w-5" />
-        </button>
+    <Modal isOpen={true} onClose={onClose} title="Welcome Back" size="sm">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Input
+          label="Email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@example.com"
+          required
+        />
 
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Login</h2>
+        <Input
+          label="Password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="••••••••"
+          required
+        />
 
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded-md">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-
-          <Button
-            type="submit"
-            className="w-full"
-            loading={loading}
-          >
-            Login
+        <div className="pt-2">
+          <Button type="submit" loading={isLoading} className="w-full">
+            Sign In
           </Button>
-        </form>
-
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
-            Don't have an account?{' '}
-            <button
-              onClick={onSwitchToRegister}
-              className="text-blue-600 hover:text-blue-700 font-medium"
-            >
-              Register here
-            </button>
-          </p>
         </div>
+      </form>
 
-        <div className="mt-4 p-3 bg-blue-50 rounded-md">
-          <p className="text-xs text-blue-700 font-medium">Demo Accounts:</p>
-          <p className="text-xs text-blue-600">Admin: admin@nccr.gov.in / admin123</p>
-          <p className="text-xs text-blue-600">NGO: ngo@example.org / ngo123</p>
-        </div>
+      <div className="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">
+        Don't have an account?{' '}
+        <button
+          type="button"
+          onClick={onSwitchToRegister}
+          className="font-medium text-ocean-600 dark:text-ocean-400 hover:text-ocean-700 dark:hover:text-ocean-300"
+        >
+          Register here
+        </button>
       </div>
-    </div>
+    </Modal>
   );
 };
 

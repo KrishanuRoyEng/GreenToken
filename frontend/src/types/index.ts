@@ -5,11 +5,12 @@ export interface User {
   organizationName?: string;
   role: UserRole;
   walletAddress?: string;
+  usesCustodianWallet?: boolean;
   isVerified: boolean;
   createdAt: string;
 }
 
-export type UserRole = 'ADMIN' | 'VERIFIER' | 'NGO' | 'PANCHAYAT' | 'COMMUNITY' | 'RESEARCHER';
+export type UserRole = 'ADMIN' | 'VERIFIER' | 'NGO' | 'PANCHAYAT' | 'COMMUNITY' | 'RESEARCHER' | 'PRIVATE_ENTITY' | 'COMPANY';
 
 export interface Project {
   id: string;
@@ -72,6 +73,10 @@ export interface MarketplaceOrder {
   pricePerToken: number;
   totalPrice: number;
   listedAt: string;
+  projectId?: string | null;
+  projectName?: string | null;
+  ecosystemType?: string | null;
+  location?: string | null;
 }
 
 export interface Notification {

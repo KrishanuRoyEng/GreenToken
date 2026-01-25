@@ -1,119 +1,103 @@
 import React from 'react';
-import { MapPin, Calendar, Leaf, TrendingUp } from 'lucide-react';
-import { Project } from '../../types';
-import Button from '../common/Button';
+import { StatusBadge, EcosystemBadge } from '../ui';
+
+interface Project {
+  id: string;
+  name: string;
+  description?: string;
+  location: string;
+  areaHectares: number;
+  ecosystemType: string;
+  status: string;
+  estimatedCredits?: number;
+  issuedCredits?: number;
+  owner?: {
+    name: string;
+    organizationName?: string;
+  };
+}
 
 interface ProjectCardProps {
   project: Project;
-  onViewDetails: (project: Project) => void;
-  onGenerateCredits?: (project: Project) => void;
+  onViewDetails?: () => void;
   showActions?: boolean;
 }
 
-const ProjectCard: React.FC<ProjectCardProps> = ({
-  project,
-  onViewDetails,
-  onGenerateCredits,
-  showActions = false
-}) => {
-  const getStatusColor = (status: string) => {
-    const colors = {
-      PENDING: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      APPROVED: 'bg-green-100 text-green-800 border-green-200',
-      REJECTED: 'bg-red-100 text-red-800 border-red-200',
-      ACTIVE: 'bg-blue-100 text-blue-800 border-blue-200',
-      COMPLETED: 'bg-gray-100 text-gray-800 border-gray-200'
-    };
-    return colors[status as keyof typeof colors] || colors.PENDING;
-  };
-
-  const getEcosystemIcon = (type: string) => {
-    const icons = {
-      MANGROVE: '🌳',
-      SEAGRASS: '🌾',
-      SALT_MARSH: '🌿',
-      KELP: '🌊'
-    };
-    return icons[type as keyof typeof icons] || '🌱';
+const ProjectCard: React.FC<ProjectCardProps> = ({ project, onViewDetails, showActions }) => {
+  const getEcosystemGradient = (type: string) => {
+    switch (type) {
+      case 'MANGROVE': return 'from-kelp-400 to-kelp-600';
+      case 'SEAGRASS': return 'from-ocean-400 to-ocean-600';
+      case 'SALT_MARSH': return 'from-coastal-400 to-coastal-600';
+      case 'KELP': return 'from-cyan-400 to-cyan-600';
+      default: return 'from-slate-400 to-slate-600';
+    }
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 hover:shadow-lg transition-shadow">
-      <div className="flex justify-between items-start mb-4">
-        <div className="flex-1">
-          <h3 className="text-xl font-semibold text-gray-900 mb-2 line-clamp-2">
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+      {/* Gradient header */}
+      <div className={`h-3 bg-gradient-to-r ${getEcosystemGradient(project.ecosystemType)}`} />
+
+      <div className="p-5">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-3">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white line-clamp-1">
             {project.name}
           </h3>
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(project.status)}`}>
-            {project.status.charAt(0) + project.status.slice(1).toLowerCase()}
-          </span>
-        </div>
-        <div className="text-3xl ml-4">
-          {getEcosystemIcon(project.ecosystemType)}
-        </div>
-      </div>
-
-      <div className="space-y-3 mb-4">
-        <div className="flex items-center text-gray-600">
-          <MapPin className="h-4 w-4 mr-2 flex-shrink-0" />
-          <span className="text-sm">
-            {project.latitude.toFixed(4)}°N, {project.longitude.toFixed(4)}°E
-          </span>
-        </div>
-        
-        <div className="flex items-center text-gray-600">
-          <Leaf className="h-4 w-4 mr-2 flex-shrink-0" />
-          <span className="text-sm">{project.areaHectares} hectares</span>
+          <StatusBadge status={project.status} />
         </div>
 
-        <div className="flex items-center text-gray-600">
-          <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
-          <span className="text-sm">
-            {new Date(project.createdAt).toLocaleDateString()}
-          </span>
+        {/* Location */}
+        <div className="flex items-center text-slate-500 dark:text-slate-400 text-sm mb-3">
+          <svg className="w-4 h-4 mr-1.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <span className="truncate">{project.location}</span>
         </div>
-      </div>
 
-      {project.description && (
-        <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-          {project.description}
-        </p>
-      )}
+        {/* Description */}
+        {project.description && (
+          <p className="text-slate-600 dark:text-slate-400 text-sm mb-4 line-clamp-2">
+            {project.description}
+          </p>
+        )}
 
-      <div className="grid grid-cols-2 gap-4 mb-4 p-3 bg-gray-50 rounded-lg">
-        <div className="text-center">
-          <div className="text-2xl font-bold text-blue-600">
-            {project.estimatedCredits || 0}
+        {/* Stats grid */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3">
+            <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Area</div>
+            <div className="font-semibold text-slate-900 dark:text-white">{project.areaHectares} ha</div>
           </div>
-          <div className="text-xs text-gray-500">Est. Credits</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-green-600">
-            {project.issuedCredits || 0}
+          <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3">
+            <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Credits</div>
+            <div className="font-semibold text-slate-900 dark:text-white">
+              {project.issuedCredits || project.estimatedCredits || 0}
+            </div>
           </div>
-          <div className="text-xs text-gray-500">Issued</div>
         </div>
-      </div>
 
-      <div className="flex gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onViewDetails(project)}
-          className="flex-1"
-        >
-          View Details
-        </Button>
-        
-        {showActions && project.status === 'APPROVED' && onGenerateCredits && (
-          <Button
-            size="sm"
-            onClick={() => onGenerateCredits(project)}
-            className="flex-1"
-          >
-            <TrendingUp className="mr-1 h-4 w-4" />
-            Generate
-          </Button>
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-700">
+          <EcosystemBadge ecosystem={project.ecosystemType} />
+
+          {showActions && onViewDetails && (
+            <button
+              onClick={onViewDetails}
+              className="text-sm text-ocean-600 dark:text-ocean-400 hover:text-ocean-700 dark:hover:text-ocean-300 font-medium"
+            >
+              View Details →
+            </button>
+          )}
+        </div>
+
+        {/* Owner info */}
+        {project.owner && (
+          <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400">
+            By {project.owner.name}
+            {project.owner.organizationName && ` • ${project.owner.organizationName}`}
+          </div>
         )}
       </div>
     </div>

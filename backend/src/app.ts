@@ -1,4 +1,4 @@
-import express, {Express } from 'express';
+import express, { Express } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -8,16 +8,21 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import path from 'path';
 
-// Routes
-import authRoutes from './routes/auth';
-import projectRoutes from './routes/projects';
-import tokenRoutes from './routes/tokens';
-import adminRoutes from './routes/admin';
-import uploadRoutes from './routes/uploads';
+// Routes (barrel import)
+import {
+  authRoutes,
+  projectRoutes,
+  tokenRoutes,
+  adminRoutes,
+  uploadRoutes,
+  paymentRoutes,
+  aiRoutes,
+  logRoutes,
+} from './routes';
 
-// Middleware
-import { errorHandler } from './middleware/errorHandler';
-import { logger } from './utils/logger';
+// Middleware & Utils (barrel imports)
+import { errorHandler } from './middleware';
+import { logger } from './utils';
 
 const app: Express = express();
 const httpServer = createServer(app);
@@ -25,36 +30,40 @@ const httpServer = createServer(app);
 // Socket.IO setup
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
-    methods: ["GET", "POST"],
-    credentials: true
-  }
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
 });
 
 // Security middleware
-app.use(helmet({
-  crossOriginEmbedderPolicy: false,
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "ws:", "wss:"]
-    }
-  }
-}));
+app.use(
+  helmet({
+    crossOriginEmbedderPolicy: false,
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: ["'self'", 'ws:', 'wss:'],
+      },
+    },
+  })
+);
 
-app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:3000",
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    credentials: true,
+  })
+);
 
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100,
-  message: 'Too many requests from this IP, please try again later.'
+  message: 'Too many requests from this IP, please try again later.',
 });
 app.use('/api', limiter);
 
@@ -64,9 +73,11 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(compression());
 
 // Logging
-app.use(morgan('combined', {
-  stream: { write: (message) => logger.info(message.trim()) }
-}));
+app.use(
+  morgan('combined', {
+    stream: { write: (message) => logger.info(message.trim()) },
+  })
+);
 
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
@@ -77,19 +88,22 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/tokens', tokenRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/uploads', uploadRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/logs', logRoutes);
 
 // Health check
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
+app.get('/health', (_req, res) => {
+  res.json({
+    status: 'OK',
     timestamp: new Date().toISOString(),
     version: process.env.npm_package_version || '1.0.0',
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
   });
 });
 
 // API documentation
-app.get('/api', (req, res) => {
+app.get('/api', (_req, res) => {
   res.json({
     message: 'Blue Carbon MRV API',
     version: '1.0.0',
@@ -98,9 +112,10 @@ app.get('/api', (req, res) => {
       projects: '/api/projects',
       tokens: '/api/tokens',
       admin: '/api/admin',
-      uploads: '/api/uploads'
+      uploads: '/api/uploads',
+      payments: '/api/payments',
     },
-    documentation: '/docs'
+    documentation: '/docs',
   });
 });
 
@@ -127,7 +142,7 @@ io.on('connection', (socket) => {
 app.use(errorHandler);
 
 // 404 handler
-app.use('*', (req, res) => {
+app.use('*', (_req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 

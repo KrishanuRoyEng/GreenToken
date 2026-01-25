@@ -5,13 +5,7 @@ import { createError } from './errorHandler';
 
 const prisma = new PrismaClient();
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: any;
-    }
-  }
-}
+// Note: Express Request.user type is defined in src/types/express.d.ts
 
 export const authenticateToken = async (
   req: Request,
@@ -27,7 +21,7 @@ export const authenticateToken = async (
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
-    
+
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
       select: {
@@ -37,6 +31,7 @@ export const authenticateToken = async (
         role: true,
         organizationName: true,
         walletAddress: true,
+        usesCustodianWallet: true,
         isVerified: true
       }
     });

@@ -178,6 +178,16 @@ class ApiService {
     return response.data;
   }
 
+  async getAllProjects(params?: any) {
+    const response = await this.api.get("/api/admin/projects", { params });
+    return response.data;
+  }
+
+  async getMapData() {
+    const response = await this.api.get("/api/admin/map-data");
+    return response.data;
+  }
+
   async getPendingApprovals() {
     // Add /api prefix to each call
     const response = await this.api.get("/api/admin/projects/pending");
@@ -197,16 +207,89 @@ class ApiService {
   }
 
   // Upload methods
-  async uploadFile(file: File, projectId?: string) {
+  async uploadFile(file: File, projectId?: string, documentType?: string) {
     const formData = new FormData();
     formData.append("file", file);
     if (projectId) formData.append("projectId", projectId);
+    if (documentType) formData.append("documentType", documentType);
 
     const response = await this.api.post("/api/uploads", formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
     });
+    return response.data;
+  }
+
+  async uploadDroneData(file: File, projectId: string) {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("projectId", projectId);
+
+    const response = await this.api.post("/api/uploads/drone", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response.data;
+  }
+
+  async getProjectDocuments(projectId: string) {
+    const response = await this.api.get(`/api/uploads/project/${projectId}`);
+    return response.data;
+  }
+
+  // Wallet methods
+  async getWalletInfo() {
+    const response = await this.api.get("/api/auth/wallet");
+    return response.data;
+  }
+
+  async setCustomWallet(walletAddress: string) {
+    const response = await this.api.post("/api/auth/wallet/custom", { walletAddress });
+    return response.data;
+  }
+
+  async useCustodianWallet() {
+    const response = await this.api.post("/api/auth/wallet/custodian");
+    return response.data;
+  }
+
+  // Project finalization
+  async finalizeProject(projectId: string) {
+    const response = await this.api.post(`/api/projects/${projectId}/finalize`);
+    return response.data;
+  }
+
+  // Payment methods
+  async getPaymentMode() {
+    const response = await this.api.get('/api/payments/mode');
+    return response.data;
+  }
+
+  async createPaymentOrder(data: { amount: number; tokenAmount: number; orderId?: string; currency?: string }) {
+    const response = await this.api.post('/api/payments/create-order', data);
+    return response.data;
+  }
+
+  async verifyPayment(data: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string; demoMode?: boolean }) {
+    const response = await this.api.post('/api/payments/verify', data);
+    return response.data;
+  }
+
+  async getPaymentHistory(params?: { page?: number; limit?: number }) {
+    const response = await this.api.get('/api/payments/history', { params });
+    return response.data;
+  }
+
+  async verifyCryptoPayment(data: { txHash: string; amount: number; tokenAmount: number; orderId?: string; walletAddress: string }) {
+    const response = await this.api.post('/api/payments/crypto/verify', data);
+    return response.data;
+  }
+
+  // Get user's own marketplace listings
+  async getUserListings() {
+    const response = await this.api.get('/api/tokens/marketplace/my-listings');
     return response.data;
   }
 }
@@ -219,6 +302,9 @@ export const authService = {
   register: apiService.register.bind(apiService),
   getProfile: apiService.getProfile.bind(apiService),
   updateProfile: apiService.updateProfile.bind(apiService),
+  getWalletInfo: apiService.getWalletInfo.bind(apiService),
+  setCustomWallet: apiService.setCustomWallet.bind(apiService),
+  useCustodianWallet: apiService.useCustodianWallet.bind(apiService),
 };
 
 export const projectService = {
@@ -229,6 +315,7 @@ export const projectService = {
   updateProject: apiService.updateProject.bind(apiService),
   approveProject: apiService.approveProject.bind(apiService),
   rejectProject: apiService.rejectProject.bind(apiService),
+  finalizeProject: apiService.finalizeProject.bind(apiService),
 };
 
 export const tokenService = {
@@ -237,6 +324,7 @@ export const tokenService = {
   sellTokens: apiService.sellTokens.bind(apiService),
   getMarketplace: apiService.getMarketplace.bind(apiService),
   purchaseFromMarketplace: apiService.purchaseFromMarketplace.bind(apiService),
+  getUserListings: apiService.getUserListings.bind(apiService),
 };
 
 export const adminService = {
@@ -248,4 +336,20 @@ export const adminService = {
   issueCredits: apiService.issueCredits.bind(apiService),
   approveProject: apiService.approveProject.bind(apiService),
   rejectProject: apiService.rejectProject.bind(apiService),
+  getAllProjects: apiService.getAllProjects.bind(apiService),
+  getMapData: apiService.getMapData.bind(apiService),
+};
+
+export const uploadService = {
+  uploadFile: apiService.uploadFile.bind(apiService),
+  uploadDroneData: apiService.uploadDroneData.bind(apiService),
+  getProjectDocuments: apiService.getProjectDocuments.bind(apiService),
+};
+
+export const paymentService = {
+  getPaymentMode: apiService.getPaymentMode.bind(apiService),
+  createOrder: apiService.createPaymentOrder.bind(apiService),
+  verifyPayment: apiService.verifyPayment.bind(apiService),
+  verifyCryptoPayment: apiService.verifyCryptoPayment.bind(apiService),
+  getHistory: apiService.getPaymentHistory.bind(apiService),
 };

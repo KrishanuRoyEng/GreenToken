@@ -51,6 +51,7 @@ export class TokenController {
     let totalTokens = 0;
     let soldTokens = 0;
     let acquiredTokens = 0;
+    let totalEarnings = 0;
 
     transactions.forEach((tx: any) => {
       if (tx.type === "mint" || tx.type === "buy") {
@@ -58,7 +59,12 @@ export class TokenController {
         if (tx.type === "buy") acquiredTokens += tx.amount;
       } else if (tx.type === "sell" || tx.type === "burn") {
         totalTokens -= tx.amount;
-        if (tx.type === "sell") soldTokens += tx.amount;
+        if (tx.type === "sell") {
+          soldTokens += tx.amount;
+          if (tx.status === 'completed') {
+            totalEarnings += tx.amount * (tx.pricePerToken || 0);
+          }
+        }
       }
     });
 
@@ -67,6 +73,7 @@ export class TokenController {
         total: Math.max(0, totalTokens),
         sold: soldTokens,
         acquired: acquiredTokens,
+        earnings: totalEarnings,
       },
       transactions,
     });
@@ -172,7 +179,10 @@ export class TokenController {
 
     const sellOrders = await prisma.transaction.findMany({
       where: { type: "sell", status: "pending" },
-      include: { user: { select: { name: true, organizationName: true } } },
+      include: {
+        user: { select: { name: true, organizationName: true } },
+        project: { select: { id: true, name: true, ecosystemType: true, location: true } },
+      },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * limit,
       take: limit,
@@ -194,6 +204,10 @@ export class TokenController {
         pricePerToken: order.pricePerToken,
         totalPrice: order.amount * (order.pricePerToken || 0),
         listedAt: order.createdAt,
+        projectId: order.project?.id || null,
+        projectName: order.project?.name || null,
+        ecosystemType: order.project?.ecosystemType || null,
+        location: order.project?.location || null,
       })),
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
       stats,
@@ -203,7 +217,7 @@ export class TokenController {
   // Purchase tokens from marketplace
   purchaseFromMarketplace = asyncHandler(
     async (req: Request, res: Response, next: NextFunction) => {
-      const { orderId } = req.params;
+      const orderId = req.params.orderId as string;
       const userId = req.user.id;
 
       // Get Prisma client lazily
@@ -255,12 +269,41 @@ export class TokenController {
     }
   );
 
+  // Get user's own marketplace listings
+  getUserListings = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user.id;
+
+    const prisma = await PrismaClientSingleton.getInstance();
+
+    const listings = await prisma.transaction.findMany({
+      where: { userId, type: "sell", status: "pending" },
+      include: {
+        project: { select: { id: true, name: true, ecosystemType: true, location: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    res.json({
+      listings: listings.map((order: any) => ({
+        id: order.id,
+        amount: order.amount,
+        pricePerToken: order.pricePerToken,
+        totalPrice: order.amount * (order.pricePerToken || 0),
+        listedAt: order.createdAt,
+        projectId: order.project?.id || null,
+        projectName: order.project?.name || null,
+        ecosystemType: order.project?.ecosystemType || null,
+        status: order.status,
+      })),
+    });
+  });
+
   // Private helper: get market statistics
   private async getMarketStats() {
 
     // Get Prisma client lazily
     const prisma = await PrismaClientSingleton.getInstance();
-    
+
     const transactions = await prisma.transaction.findMany({
       where: {
         type: { in: ["buy", "sell"] },
@@ -281,7 +324,7 @@ export class TokenController {
     const avgPrice =
       prices.length > 0
         ? prices.reduce((sum: number, price: number) => sum + price, 0) /
-          prices.length
+        prices.length
         : 0;
 
     return {
