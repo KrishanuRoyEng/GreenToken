@@ -1,149 +1,79 @@
-# GreenToken
-## A Blue Carbon MRV Platform
+# 🌿 GreenToken: Blue Carbon MRV Platform
 
-A full-stack application for managing blue carbon projects, monitoring carbon credits, and enabling a tokenized marketplace for verified environmental projects.
+**GreenToken** is a decentralized platform dedicated to the **Monitoring, Reporting, and Verification (MRV)** of Blue Carbon projects (mangroves, seagrass, etc.). It leverages AI for automated verification and Blockchain for transparent, tradeable carbon credits.
 
----
+## 🚀 Key Features
 
-## Quick Start
+*   **🌍 Project Registration**: Developers can register blue carbon projects with geospatial data.
+*   **🤖 AI Verification**: Automated analysis of satellite/drone imagery to verify carbon sequestration claims.
+*   **⛓️ Tokenization**: Validated projects receive Carbon Credit Tokens (ERC-20) and Soulbound Tokens for identity.
+*   **💼 Dual Wallet System**:
+    *   **Custodian Wallet**: For traditional users (managed by platform).
+    *   **Custom Wallet**: Metamask integration for web3 natives.
+*   **📦 IPFS Storage**: Immutable storage for project reports and raw data.
+*   **📊 Marketplace**: Buy and sell carbon credits directly on the platform.
+
+## 🛠️ Tech Stack
+
+### Frontend
+*   **Framework**: React (Vite)
+*   **Language**: TypeScript
+*   **Styling**: Tailwind CSS
+*   **Maps**: Leaflet (`react-leaflet`)
+*   **State**: Zustand, React Query
+
+### Backend
+*   **Runtime**: Node.js
+*   **Framework**: Express via TS
+*   **Database**: PostgreSQL (Prisma ORM)
+*   **Storage**: IPFS (`helia`)
+*   **Security**: JWT, Bcrypt
+
+### AI Service
+*   **Language**: Python
+*   **Framework**: FastAPI
+*   **Libraries**: GeoPandas, Shapely, Scikit-Learn
+
+### Blockchain
+*   **Network**: Polygon
+*   **Framework**: Hardhat
+*   **Contracts**: Solidity (ERC-20, Custom Registries)
+
+## 🏃‍♂️ Getting Started
 
 ### Prerequisites
+*   Docker & Docker Compose
+*   Node.js (v18+)
+*   Git
 
-- Node.js v18+
-- Docker & Docker Compose
-- npm or pnpm
+### Installation
+1.  **Clone the repository**
+    ```bash
+    git clone https://github.com/KrishanuRoyEng/GreenToken.git
+    cd GreenToken
+    ```
 
-### Setup
+2.  **Environment Setup**
+    *   Copy `.env.example` to `.env` in the root.
+    *   Fill in the required variables (DATABASE_URL, JWT_SECRET, etc.).
 
-```bash
-# 1. Clone and enter the repository
-git clone <repo-url>
-cd greentoken
+3.  **Run with Docker (Recommended)**
+    This will start Backend, Frontend, Postgres, IPFS, and the AI Service.
+    ```bash
+    docker-compose up --build
+    ```
 
-# 2. Run the setup script
-./scripts/setup.sh
+4.  **Access the App**
+    *   Frontend: `http://localhost:3000`
+    *   Backend API: `http://localhost:5000`
+    *   AI Service: `http://localhost:8000`
 
-# 3. Start development
-npm run dev
-```
+## 📂 Project Structure
 
-The setup script will:
-- Install all dependencies
-- Create `.env` file from `.env.example`
-- Start PostgreSQL, Redis, and IPFS containers
-- Run database migrations and seed data
+*   `frontend/`: React application.
+*   `backend/`: Node.js Express API.
+*   `ai-service/`: Python verification service.
+*   `contracts/`: Solidity smart contracts (found in root or separate repo if not present here - *Note: based on inference*).
 
----
-
-## Development
-
-### Commands
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start both frontend and backend |
-| `npm run backend:dev` | Start backend only |
-| `npm run frontend:dev` | Start frontend only |
-| `./scripts/setup.sh` | Full project setup |
-| `./scripts/stop.sh` | Stop all services |
-| `./scripts/deploy.sh` | Production deployment |
-| `./scripts/clean.sh` | Full cleanup |
-| `./scripts/backup.sh` | Backup database and files |
-
-### Services
-
-| Service | URL |
-|---------|-----|
-| Frontend | http://localhost:3000 |
-| Backend API | http://localhost:5000 |
-| IPFS Gateway | http://localhost:8080 |
-| PostgreSQL | localhost:5432 |
-| Redis | localhost:6379 |
-
-### Default Credentials
-
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | admin@nccr.gov.in | admin123 |
-| NGO | ngo@example.org | ngo123 |
-| Panchayat | panchayat@village.gov.in | panchayat123 |
-
----
-
-## Project Structure
-
-```
-greentoken/
-├── .env.example        # All environment variables (copy to .env)
-├── docker-compose.yml  # Container orchestration
-├── backend/
-│   ├── Dockerfile
-│   ├── src/            # Express API, controllers, routes
-│   └── prisma/         # Database schema and migrations
-├── frontend/
-│   ├── Dockerfile
-│   └── src/            # React + Vite app
-└── scripts/
-    ├── setup.sh        # Initial setup
-    ├── dev.sh          # Start development
-    ├── stop.sh         # Stop services
-    ├── deploy.sh       # Production deployment
-    ├── clean.sh        # Full cleanup
-    └── backup.sh       # Backup utility
-```
-
----
-
-## Environment Configuration
-
-All environment variables are consolidated in a single `.env.example` file at the project root.
-
-```bash
-# Copy and configure
-cp .env.example .env
-```
-
-Key variables:
-- `POSTGRES_*` - Database configuration
-- `JWT_SECRET` - Authentication secret
-- `VITE_*` - Frontend configuration
-- `BLOCKCHAIN_RPC_URL` - (Optional) For smart contract integration
-
----
-
-## Docker
-
-### Development (with hot-reload)
-
-```bash
-# Start infrastructure only
-docker-compose up -d postgres redis ipfs
-
-# Run apps locally
-npm run dev
-```
-
-### Full Docker Stack
-
-```bash
-# Build and run everything
-docker-compose up --build
-
-# Or use deploy script
-./scripts/deploy.sh
-```
-
----
-
-## Tech Stack
-
-**Frontend:** React, TypeScript, Vite, Tailwind CSS, Lucide-react  
-**Backend:** Node.js, Express, TypeScript, Prisma ORM, Socket.IO  
-**Database:** PostgreSQL, Redis  
-**Storage:** IPFS
-
----
-
-## License
-
-MIT License © 2025
+## 📄 Documentation
+For detailed technical documentation, please refer to [TECHNICAL_DOCS.md](./TECHNICAL_DOCS.md).
