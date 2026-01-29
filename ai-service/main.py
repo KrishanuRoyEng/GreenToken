@@ -43,13 +43,15 @@ async def predict_carbon(data: Dict[str, float]):
             data.get("age", 10)
         ]]
         prediction = model.predict(features)[0]
-        
-        # Calculate confidence (mock logic based on distance from training data)
-        confidence = 0.85 if data.get("area", 0) < 200 else 0.65
+        preds = [tree.predict(features) for tree in model.estimators_]
+
+        uncert = np.std(preds)
+        conf = max(0.0, 1.0 - (uncert / 50.0))        
 
         return {
             "predicted_carbon_credits": round(prediction, 2),
-            "confidence_score": confidence,
+            "confidence_score": conf,
+            "uncertainity_score": uncert,
             "ecosystem_valuation_usd": round(prediction * 25, 2) # $25 per credit
         }
     except Exception as e:
