@@ -63,6 +63,9 @@ dist
 /backend/dist
 /backend/.cache
 
+# ai-service
+/ai-service/venv/
+
 # NPM package lock
 package-lock.json
 pnpm-lock.yaml
