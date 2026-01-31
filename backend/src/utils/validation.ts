@@ -4,10 +4,10 @@ export const validateProjectData = (data: any) => {
   const schema = Joi.object({
     name: Joi.string().min(3).max(100).required(),
     description: Joi.string().max(500).optional(),
-    location: Joi.string().min(5).max(200).required(),
+    location: Joi.string().min(2).max(200).required(),
     latitude: Joi.number().min(-90).max(90).required(),
     longitude: Joi.number().min(-180).max(180).required(),
-    areaHectares: Joi.number().min(0.1).max(10000).required(),
+    areaHectares: Joi.number().min(0.1).max(100_00).required(),
     ecosystemType: Joi.string().valid('MANGROVE', 'SEAGRASS', 'SALT_MARSH', 'KELP').required()
   });
 

@@ -194,6 +194,30 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, onSuccess }) => {
     setIsFinalizing(true);
 
     try {
+      if (formData.location.length < 2 || formData.location.length > 200) {
+        toast.error("Project location must be at least 2 characters long and at most 200 characters long");
+        return;
+      }
+      if (formData.name.length < 3 || formData.name.length > 100) {
+        toast.error("Project name must be at least 3 characters long and at most 100 characters long");
+        return;
+      }
+      if (formData.description && formData.description?.length > 500) {
+        toast.error("Project description must be at most 500 characters long");
+        return;
+      }
+      if (formData.latitude < -90 || formData.latitude > 90) {
+        toast.error("Latitude must be between -90 and 90");
+        return;
+      }
+      if (formData.longitude < -180 || formData.longitude > 180) {
+        toast.error("Longitude must be between -180 and 180");
+        return;
+      }
+      if (formData.areaHectares < 0.1 || formData.areaHectares > 100_00) {
+        toast.error("Area must be between 0.1 and 10000 hectares");
+        return;
+      }
       await projectService.finalizeProject(projectId);
       toast.success('Project submitted for review!');
       onSuccess();
