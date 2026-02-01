@@ -64,7 +64,7 @@ export class UploadController {
     // Get Prisma client lazily
     const prisma = await PrismaClientSingleton.getInstance();
 
-    // Verify project exists and user owns it
+    // Verify project exists and user owns it (if projectId provided)
     if (projectId) {
       const project = await prisma.project.findFirst({
         where: { id: projectId, ownerId: req.user.id }
@@ -126,7 +126,7 @@ export class UploadController {
     const { projectId } = req.body;
     const prisma = await PrismaClientSingleton.getInstance();
 
-    // Verify project ownership
+    // Verify project ownership (if projectId provided)
     if (projectId) {
       const project = await prisma.project.findFirst({
         where: { id: projectId, ownerId: req.user.id }

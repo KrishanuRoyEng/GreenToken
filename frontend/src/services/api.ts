@@ -47,6 +47,17 @@ class ApiService {
     const response = await this.api.post(url, data, config);
     return response.data;
   }
+
+  async put(url: string, data?: any, config?: any) {
+    const response = await this.api.put(url, data, config);
+    return response.data;
+  }
+
+  async delete(url: string, config?: any) {
+    const response = await this.api.delete(url, config);
+    return response.data;
+  }
+
   // Auth methods
   async login(email: string, password: string) {
     // Add /api prefix to each call
@@ -239,6 +250,11 @@ class ApiService {
     return response.data;
   }
 
+  async deleteFile(fileId: string) {
+    const response = await this.api.delete(`/api/uploads/${fileId}`);
+    return response.data;
+  }
+
   // Wallet methods
   async getWalletInfo() {
     const response = await this.api.get("/api/auth/wallet");
@@ -344,6 +360,7 @@ export const uploadService = {
   uploadFile: apiService.uploadFile.bind(apiService),
   uploadDroneData: apiService.uploadDroneData.bind(apiService),
   getProjectDocuments: apiService.getProjectDocuments.bind(apiService),
+  deleteFile: apiService.deleteFile.bind(apiService),
 };
 
 export const paymentService = {

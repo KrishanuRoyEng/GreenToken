@@ -8,7 +8,8 @@ export const validateProjectData = (data: any) => {
     latitude: z.number().min(-90).max(90),
     longitude: z.number().min(-180).max(180),
     areaHectares: z.number().min(0.1).max(10000),
-    ecosystemType: z.enum(['MANGROVE', 'SEAGRASS', 'SALT_MARSH', 'KELP'])
+    ecosystemType: z.enum(['MANGROVE', 'SEAGRASS', 'SALT_MARSH', 'KELP']),
+    documentIds: z.array(z.string()).optional()
   });
 
   return schema.safeParse(data);

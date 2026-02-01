@@ -15,9 +15,6 @@ router.get('/user', projectController.getUserProjects);
 router.get('/:id', projectController.getProject);
 router.put('/:id', projectController.updateProject);
 
-// Finalize project (validates images, uploads to IPFS)
-router.post('/:id/finalize', projectController.finalizeProject);
-
 // Admin/Verifier only routes
 router.post('/:id/approve', requireVerifier, projectController.approveProject);
 router.post('/:id/reject', requireVerifier, projectController.rejectProject);

@@ -25,6 +25,7 @@ export class ProjectController {
 
     const userId = req.user.id;
     const projectData = result.data;
+    const documentIds = projectData.documentIds || [];
 
     // Calculate estimated credits
     const estimatedCredits = this.calculateEstimatedCredits(
@@ -32,106 +33,102 @@ export class ProjectController {
       projectData.ecosystemType
     );
 
-    // Create project in database
+    // 1. Create project in database
     const project = await prisma.project.create({
       data: {
-        ...projectData,
+        name: projectData.name,
+        description: projectData.description,
+        location: projectData.location,
+        latitude: projectData.latitude,
+        longitude: projectData.longitude,
+        areaHectares: projectData.areaHectares,
+        ecosystemType: projectData.ecosystemType,
         ownerId: userId,
         estimatedCredits
-      },
-      include: {
-        owner: {
-          select: { id: true, name: true, organizationName: true }
-        }
       }
     });
 
-    // Notify admins
-    io.to('admin-room').emit('new-project', {
-      message: `New project "${project.name}" submitted for approval`,
-      project
-    });
-
-    logger.info(`Project created: ${project.name} by ${req.user.email}`);
-
-    res.status(201).json({
-      message: 'Project created successfully',
-      project
-    });
-  });
-
-  // Finalize project with images - call this after uploading documents
-  finalizeProject = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-    const projectId = req.params.id as string;
-    const userId = req.user.id;
-    const prisma = await PrismaClientSingleton.getInstance();
-
-    // Get project with documents
-    const project = await prisma.project.findFirst({
-      where: { id: projectId, ownerId: userId },
-      include: {
-        documents: true,
-        owner: { select: { id: true, name: true, walletAddress: true } }
-      }
-    });
-
-    if (!project) {
-      return next(createError('Project not found or access denied', 404));
+    // 2. Link documents to project
+    if (documentIds.length > 0) {
+      await prisma.document.updateMany({
+        where: {
+          id: { in: documentIds },
+          projectId: null // Only claim unlinked documents
+        },
+        data: { projectId: project.id }
+      });
     }
 
+    // 3. Fetch full project with documents for finalization
+    const fullProject = await prisma.project.findUnique({
+      where: { id: project.id },
+      include: {
+        documents: true,
+        owner: { select: { id: true, name: true, organizationName: true, walletAddress: true } }
+      }
+    });
+
+    if (!fullProject) {
+      return next(createError('Failed to retrieve created project', 500));
+    }
+
+    // 4. Finalization Logic (Blockchain & IPFS)
+
     // Check for mandatory images
-    const images = project.documents.filter((d: any) => d.documentType === 'IMAGE');
+    const images = fullProject.documents.filter((d: any) => d.documentType === 'IMAGE');
     if (images.length < 1) {
+      // If atomic creation fails requirements, delete the project
+      await prisma.project.delete({ where: { id: project.id } });
       return next(createError('At least 1 image is required for project submission', 400));
     }
 
     // Collect document hashes
-    const documentHashes = project.documents
+    const documentHashes = fullProject.documents
       .filter((d: any) => d.ipfsHash)
       .map((d: any) => d.ipfsHash as string);
 
-    // Generate project data hash for blockchain integrity
+    // Generate project data hash
     const dataHash = blockchainService.hashProjectData({
-      name: project.name,
-      location: project.location,
-      latitude: project.latitude,
-      longitude: project.longitude,
-      areaHectares: project.areaHectares,
-      ecosystemType: project.ecosystemType,
-      ownerId: project.ownerId,
+      name: fullProject.name,
+      location: fullProject.location,
+      latitude: fullProject.latitude,
+      longitude: fullProject.longitude,
+      areaHectares: fullProject.areaHectares,
+      ecosystemType: fullProject.ecosystemType,
+      ownerId: fullProject.ownerId,
       documentHashes
     });
 
-    // Create full project metadata for IPFS
+    // Create Metadata
     const projectMetadata = {
-      id: project.id,
-      name: project.name,
-      description: project.description,
-      location: project.location,
-      coordinates: { lat: project.latitude, lng: project.longitude },
-      area: project.areaHectares,
-      ecosystemType: project.ecosystemType,
-      owner: project.owner.name,
+      id: fullProject.id,
+      name: fullProject.name,
+      description: fullProject.description,
+      location: fullProject.location,
+      coordinates: { lat: fullProject.latitude, lng: fullProject.longitude },
+      area: fullProject.areaHectares,
+      ecosystemType: fullProject.ecosystemType,
+      owner: fullProject.owner.name,
       documents: documentHashes,
       dataHash,
       timestamp: new Date().toISOString()
     };
 
-    // Upload metadata to IPFS
+    // Upload Metadata to IPFS
     const ipfsMetadataHash = await ipfsService.uploadJSON(projectMetadata);
 
-    // Submit project to blockchain
+    // Submit to Blockchain
     let blockchainId = 0;
     let txHash = '';
 
     try {
       const result = await blockchainService.submitProject(
-        project.name,
-        project.location,
-        project.latitude,
-        project.longitude,
-        project.areaHectares,
-        project.ecosystemType,
+        fullProject.name,
+        fullProject.location,
+        fullProject.latitude,
+        fullProject.longitude,
+        fullProject.areaHectares,
+        fullProject.ecosystemType,
         ipfsMetadataHash
       );
       blockchainId = result.blockchainId;
@@ -139,40 +136,35 @@ export class ProjectController {
       logger.info(`Project submitted to blockchain: ${blockchainId}, tx: ${txHash}`);
     } catch (error: any) {
       logger.error(`Failed to submit project to blockchain: ${error.message}`);
-      // Continue anyway, admin can retry or Fix it later? 
-      // For now, we'll continue but log it. In strict mode, we might want to fail the request.
     }
 
-    // Update project with hashes and blockchain info
+    // Update project with final details
     const updatedProject = await prisma.project.update({
-      where: { id: projectId },
+      where: { id: project.id },
       data: {
         dataHash,
         ipfsMetadataHash,
-        status: 'PENDING', // Ready for admin review
         blockchainId: blockchainId > 0 ? blockchainId : undefined,
-        // We could store txHash in a separate column or metadata, but for now we log it
       },
       include: {
         documents: true,
-        owner: { select: { name: true, organizationName: true } }
+        owner: { select: { id: true, name: true, organizationName: true } }
       }
     });
 
-    logger.info(`Project finalized with IPFS hash: ${project.name}, hash: ${ipfsMetadataHash}`);
-
     // Notify admins
-    io.to('admin-room').emit('project-ready', {
-      message: `Project "${project.name}" is ready for review`,
+    io.to('admin-room').emit('new-project', {
+      message: `New project "${updatedProject.name}" submitted for approval`,
       project: updatedProject
     });
 
-    res.json({
-      message: 'Project finalized and submitted for review',
+    logger.info(`Project created and finalized: ${updatedProject.name} by ${req.user.email}`);
+
+    res.status(201).json({
+      message: 'Project created and submitted successfully',
       project: updatedProject,
       ipfsMetadataHash,
-      dataHash,
-      ipfsGatewayUrl: ipfsService.getGatewayUrl(ipfsMetadataHash)
+      dataHash
     });
   });
 

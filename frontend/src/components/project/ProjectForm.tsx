@@ -4,7 +4,7 @@ import Button from '../common/Button';
 import { Input, Textarea, Select } from '../ui/Input';
 import toast from 'react-hot-toast';
 import { useProjects } from '../../hooks/useProjects';
-import { uploadService, projectService } from '../../services/api';
+import { uploadService } from '../../services/api';
 import { CreateProjectData } from '../../types';
 
 interface ProjectFormProps {
@@ -15,12 +15,13 @@ interface ProjectFormProps {
 type Step = 'info' | 'uploads' | 'review';
 
 interface UploadedFile {
-  id: string;
+  id: string; // Internal unique ID for the list
   file: File;
   preview?: string; // Only for images
   type: 'IMAGE' | 'DRONE_DATA' | 'REPORT';
   status: 'pending' | 'uploading' | 'success' | 'error';
   ipfsHash?: string;
+  documentId?: string; // Backend database ID
 }
 
 const ecosystemOptions = [
@@ -33,7 +34,7 @@ const ecosystemOptions = [
 const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, onSuccess }) => {
   const { createProject, isLoading } = useProjects();
   const [currentStep, setCurrentStep] = useState<Step>('info');
-  const [projectId, setProjectId] = useState<string | null>(null);
+  // Removed projectId state as we don't create it until the end
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
@@ -94,13 +95,35 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, onSuccess }) => {
         return;
       }
 
-      try {
-        const result = await createProject(formData);
-        setProjectId(result.id);
-        setCurrentStep('uploads');
-      } catch {
-        toast.error('Failed to create project');
+      // Validation Logic for Step 1
+      if (formData.location.length < 2 || formData.location.length > 200) {
+        toast.error("Project location must be at least 2 characters long and at most 200 characters long");
+        return;
       }
+      if (formData.name.length < 3 || formData.name.length > 100) {
+        toast.error("Project name must be at least 3 characters long and at most 100 characters long");
+        return;
+      }
+      if (formData.description && formData.description?.length > 500) {
+        toast.error("Project description must be at most 500 characters long");
+        return;
+      }
+      if (formData.latitude < -90 || formData.latitude > 90) {
+        toast.error("Latitude must be between -90 and 90");
+        return;
+      }
+      if (formData.longitude < -180 || formData.longitude > 180) {
+        toast.error("Longitude must be between -180 and 180");
+        return;
+      }
+      if (formData.areaHectares < 0.1 || formData.areaHectares > 10000) {
+        toast.error("Area must be between 0.1 and 10000 hectares");
+        return;
+      }
+
+      // Proceed to uploads without creating project yet
+      setCurrentStep('uploads');
+
     } else if (currentStep === 'uploads') {
       if (files.filter(f => f.type === 'IMAGE' && f.status === 'success').length < 1) {
         toast.error('Please upload at least 1 image');
@@ -148,18 +171,31 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, onSuccess }) => {
     addFiles(validFiles, type);
   };
 
-  const removeFile = (id: string) => {
-    setFiles(prev => {
-      const file = prev.find(f => f.id === id);
-      if (file && file.preview) URL.revokeObjectURL(file.preview);
-      return prev.filter(f => f.id !== id);
-    });
+  const removeFile = async (id: string) => {
+    const fileToRemove = files.find(f => f.id === id);
+
+    // If it was already uploaded to server, delete it
+    if (fileToRemove?.documentId && fileToRemove.status === 'success') {
+      try {
+        await uploadService.deleteFile(fileToRemove.documentId);
+        toast.success('File removed properly');
+      } catch (err) {
+        console.error("Failed to delete file from server", err);
+        // Continue to remove from UI anyway
+      }
+    }
+
+    if (fileToRemove && fileToRemove.preview) {
+      URL.revokeObjectURL(fileToRemove.preview);
+    }
+
+    setFiles(prev => prev.filter(f => f.id !== id));
   };
 
   const uploadFiles = async () => {
-    if (!projectId) return;
     setIsUploading(true);
 
+    // We no longer need projectId here
     for (const fileItem of files) {
       if (fileItem.status === 'success') continue;
 
@@ -168,10 +204,16 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, onSuccess }) => {
       );
 
       try {
-        const result = await uploadService.uploadFile(fileItem.file, projectId, fileItem.type);
+        // Pass undefined for projectId
+        const result = await uploadService.uploadFile(fileItem.file, undefined, fileItem.type);
         setFiles(prev =>
           prev.map(f => f.id === fileItem.id
-            ? { ...f, status: 'success' as const, ipfsHash: result.document?.ipfsHash }
+            ? {
+              ...f,
+              status: 'success' as const,
+              ipfsHash: result.file?.ipfsHash,
+              documentId: result.file?.id
+            }
             : f
           )
         );
@@ -190,39 +232,26 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, onSuccess }) => {
   };
 
   const handleFinalize = async () => {
-    if (!projectId) return;
     setIsFinalizing(true);
 
     try {
-      if (formData.location.length < 2 || formData.location.length > 200) {
-        toast.error("Project location must be at least 2 characters long and at most 200 characters long");
-        return;
-      }
-      if (formData.name.length < 3 || formData.name.length > 100) {
-        toast.error("Project name must be at least 3 characters long and at most 100 characters long");
-        return;
-      }
-      if (formData.description && formData.description?.length > 500) {
-        toast.error("Project description must be at most 500 characters long");
-        return;
-      }
-      if (formData.latitude < -90 || formData.latitude > 90) {
-        toast.error("Latitude must be between -90 and 90");
-        return;
-      }
-      if (formData.longitude < -180 || formData.longitude > 180) {
-        toast.error("Longitude must be between -180 and 180");
-        return;
-      }
-      if (formData.areaHectares < 0.1 || formData.areaHectares > 100_00) {
-        toast.error("Area must be between 0.1 and 10000 hectares");
-        return;
-      }
-      await projectService.finalizeProject(projectId);
+      // Collect all uploaded document IDs
+      const documentIds = files
+        .filter(f => f.status === 'success' && f.documentId)
+        .map(f => f.documentId as string);
+
+      // Atomic creation
+      const projectDataWithDocs = {
+        ...formData,
+        documentIds
+      };
+
+      await createProject(projectDataWithDocs);
       toast.success('Project submitted for review!');
       onSuccess();
-    } catch {
-      toast.error('Failed to finalize project');
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to create project');
     } finally {
       setIsFinalizing(false);
     }
@@ -519,10 +548,6 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, onSuccess }) => {
               <div>
                 <span className="text-slate-500 dark:text-slate-400">Area:</span>
                 <p className="font-medium text-slate-900 dark:text-slate-100">{formData.areaHectares} hectares</p>
-              </div>
-              <div>
-                <span className="text-slate-500 dark:text-slate-400">Ecosystem:</span>
-                <p className="font-medium text-slate-900 dark:text-slate-100">{formData.ecosystemType.replace('_', ' ')}</p>
               </div>
               <div>
                 <span className="text-slate-500 dark:text-slate-400">Ecosystem:</span>

@@ -7,17 +7,18 @@ import toast from 'react-hot-toast';
 interface ImageUploadModalProps {
     isOpen: boolean;
     onClose: () => void;
-    projectId: string;
+    projectId?: string; // Optional now
     onUploadComplete: (documents: any[]) => void;
     minImages?: number;
 }
 
 interface UploadedImage {
-    id: string;
+    id: string; // internal id
     file: File;
     preview: string;
     status: 'pending' | 'uploading' | 'success' | 'error';
     ipfsHash?: string;
+    documentId?: string; // Backend ID
     progress?: number;
 }
 
@@ -66,14 +67,25 @@ export const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
         setImages(prev => [...prev, ...newImages]);
     };
 
-    const removeImage = (id: string) => {
-        setImages(prev => {
-            const image = prev.find(img => img.id === id);
-            if (image) {
-                URL.revokeObjectURL(image.preview);
+    const removeImage = async (id: string) => {
+        const image = images.find(img => img.id === id);
+
+        // If it was already uploaded, delete from server
+        if (image?.status === 'success' && image.documentId) {
+            try {
+                await uploadService.deleteFile(image.documentId);
+                toast.success('Image removed');
+            } catch (err) {
+                console.error("Failed to remove image", err);
+                // remove from UI anyway
             }
-            return prev.filter(img => img.id !== id);
-        });
+        }
+
+        if (image) {
+            URL.revokeObjectURL(image.preview);
+        }
+
+        setImages(prev => prev.filter(img => img.id !== id));
     };
 
     const uploadImages = async () => {
@@ -83,12 +95,19 @@ export const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
         }
 
         setIsUploading(true);
+        // We'll return full document objects including IDs
         const uploadedDocs: any[] = [];
 
         for (let i = 0; i < images.length; i++) {
             const image = images[i];
             if (image.status === 'success') {
-                uploadedDocs.push({ ipfsHash: image.ipfsHash });
+                if (image.documentId) {
+                    uploadedDocs.push({
+                        ipfsHash: image.ipfsHash,
+                        id: image.documentId,
+                        documentType: 'IMAGE'
+                    });
+                }
                 continue;
             }
 
@@ -99,15 +118,20 @@ export const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
             );
 
             try {
-                const result = await uploadService.uploadFile(image.file, projectId, 'IMAGE');
+                // Pass undefined projectId if not available
+                const result = await uploadService.uploadFile(image.file, projectId || undefined, 'IMAGE');
+
+                const documentId = result.file?.id;
+                const ipfsHash = result.file?.ipfsHash;
+
                 setImages(prev =>
                     prev.map(img =>
                         img.id === image.id
-                            ? { ...img, status: 'success' as const, ipfsHash: result.document?.ipfsHash }
+                            ? { ...img, status: 'success' as const, ipfsHash, documentId }
                             : img
                     )
                 );
-                uploadedDocs.push(result.document);
+                uploadedDocs.push(result.file);
             } catch (error) {
                 setImages(prev =>
                     prev.map(img =>
@@ -120,7 +144,9 @@ export const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
 
         setIsUploading(false);
 
-        if (uploadedDocs.length >= minImages) {
+        const successCount = images.filter(img => img.status === 'success').length; // Re-calculate based on current state (some might have failed)
+
+        if (successCount >= minImages) {
             toast.success('Images uploaded successfully!');
             onUploadComplete(uploadedDocs);
         }

@@ -132,8 +132,8 @@ model Document {
   isRequired    Boolean      @default(false)
   uploadedAt    DateTime     @default(now())
   
-  project       Project      @relation(fields: [projectId], references: [id])
-  projectId     String
+  project       Project?     @relation(fields: [projectId], references: [id])
+  projectId     String?
 
   @@map("documents")
 }
