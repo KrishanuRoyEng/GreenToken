@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { adminService, projectService } from "../services/api";
+import { adminService, projectService, getAbsoluteUrl } from "../services/api";
 import { User } from "../types";
 import Button from "../components/common/Button";
 import LoadingSpinner from "../components/common/LoadingSpinner";
@@ -432,7 +432,7 @@ const Admin: React.FC = () => {
                         <p className="text-sm text-slate-900 dark:text-white truncate">{doc.originalName}</p>
                         {doc.ipfsUrl && (
                           <a
-                            href={doc.ipfsUrl}
+                            href={getAbsoluteUrl(doc.ipfsUrl)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-xs text-ocean-500 hover:underline mt-1 block"

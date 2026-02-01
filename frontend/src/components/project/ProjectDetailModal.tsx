@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal, ModalFooter, StatusBadge, EcosystemBadge } from '../ui';
 import Button from '../common/Button';
 import LoadingSpinner from '../common/LoadingSpinner';
-import { projectService } from '../../services/api';
+import { projectService, getAbsoluteUrl } from '../../services/api';
 import toast from 'react-hot-toast';
 
 interface ProjectDetailModalProps {
@@ -256,7 +256,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project, onClos
                                         </p>
                                         {doc.ipfsUrl && (
                                             <a
-                                                href={doc.ipfsUrl}
+                                                href={getAbsoluteUrl(doc.ipfsUrl)}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="inline-flex items-center text-xs text-ocean-600 dark:text-ocean-400 hover:underline"
