@@ -46,7 +46,7 @@ const AIDashboard: React.FC = () => {
 
         try {
             // Get token from localStorage if you have auth
-            const token = localStorage.getItem('token');
+            const token = localStorage.getItem('authToken');
             const res = await axios.post(`${API_URL}/api/ai/process-file`, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
@@ -70,7 +70,7 @@ const AIDashboard: React.FC = () => {
         setIsLoading(true);
         setResults(null);
         try {
-            const token = localStorage.getItem('token');
+            const token = localStorage.getItem('authToken');
             const res = await axios.post(`${API_URL}/api/ai/predict`, manualInput, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
