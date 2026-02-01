@@ -29,6 +29,16 @@ services:
       - "8080:8080"
     volumes:
       - ipfs_data:/data/ipfs
+    # Use array syntax for entrypoint to avoid shell parsing issues
+    entrypoint: [ "/bin/sh", "-c" ]
+    # Use block literal for cleaner script definition
+    command:
+      - |
+        if [ ! -f /data/ipfs/config ]; then ipfs init; fi
+        ipfs config Addresses.API /ip4/0.0.0.0/tcp/5001
+        ipfs config --json API.HTTPHeaders.Access-Control-Allow-Origin '["*"]'
+        ipfs config --json API.HTTPHeaders.Access-Control-Allow-Methods '["PUT", "POST", "GET"]'
+        exec ipfs daemon --migrate=true --enable-gc
 
   # Backend API
   backend:

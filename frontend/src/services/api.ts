@@ -1,8 +1,14 @@
 import axios, { AxiosInstance } from "axios";
 
 // Change the base URL to NOT include the /api prefix
-const API_BASE_URL =
+export const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+export const getAbsoluteUrl = (url: string | undefined | null) => {
+  if (!url) return '';
+  if (url.startsWith('http') || url.startsWith('blob:')) return url;
+  return `${API_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+};
 
 class ApiService {
   private api: AxiosInstance;

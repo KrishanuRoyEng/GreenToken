@@ -209,15 +209,15 @@ export class IPFSService {
 
     if (cid.startsWith('local:')) {
       const filename = cid.replace('local:', '');
-      const baseUrl = process.env.VITE_API_URL || 'http://localhost:5000';
-      return `${baseUrl}/uploads/fallback/${filename}`;
+      // Return relative URL for frontend to handle
+      return `/uploads/fallback/${filename}`;
     }
 
     // Proxy via backend to ensure access to the restricted docker node
     // Note: We still proxy through backend because the frontend container 
     // might not have direct access to the 'ipfs' service name (browser runs in host network context usually)
-    const baseUrl = process.env.VITE_API_URL || 'http://localhost:5000';
-    return `${baseUrl}/api/uploads/ipfs/${cid}`;
+    // Return relative URL for frontend to handle
+    return `/api/uploads/ipfs/${cid}`;
   }
 }
 

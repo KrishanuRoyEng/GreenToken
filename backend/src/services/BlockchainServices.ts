@@ -169,7 +169,7 @@ export class BlockchainService {
         location,
         latInt,
         longInt,
-        areaHectares,
+        Math.round(areaHectares),
         ecosystemTypeEnum,
         ipfsMetadata
       );
