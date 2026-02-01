@@ -10,16 +10,21 @@ import { blockchainService } from '../services/BlockchainServices';
 
 export class ProjectController {
   createProject = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-    const { error, value } = validateProjectData(req.body);
+    const result = validateProjectData(req.body);
 
     const prisma = await PrismaClientSingleton.getInstance();
 
-    if (error) {
-      return next(createError(error.details[0].message, 400));
+    if (!result.success) {
+      return next(
+        createError(
+          result.error.issues.map((i) => i.message).join(', '),
+          400
+        )
+      );
     }
 
     const userId = req.user.id;
-    const projectData = value;
+    const projectData = result.data;
 
     // Calculate estimated credits
     const estimatedCredits = this.calculateEstimatedCredits(

@@ -196,13 +196,18 @@ export class AdminController {
       const prisma = await PrismaClientSingleton.getInstance();
 
       const projectId = req.params.projectId as string;
-      const { error, value } = validateCreditIssuance(req.body);
+      const result = validateCreditIssuance(req.body);
 
-      if (error) {
-        return next(createError(error.details[0].message, 400));
+      if (!result.success) {
+        return next(
+          createError(
+            result.error.issues.map((i) => i.message).join(', '),
+            400
+          )
+        );
       }
 
-      const { amount, verificationData } = value;
+      const { amount, verificationData } = result.data;
 
       const project = await prisma.project.findUnique({
         where: { id: projectId },

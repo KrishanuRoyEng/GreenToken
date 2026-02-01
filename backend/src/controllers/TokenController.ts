@@ -82,11 +82,17 @@ export class TokenController {
   // Buy tokens
   buyTokens = asyncHandler(
     async (req: Request, res: Response, next: NextFunction) => {
-      const { error, value } = validateTokenTransaction(req.body);
-      if (error) return next(createError(error.details[0].message, 400));
+      const result = validateTokenTransaction(req.body);
+      if (!result.success)
+        return next(
+          createError(
+            result.error.issues.map((i) => i.message).join(', '),
+            400
+          )
+        );
 
       const userId = req.user.id;
-      const { amount } = value;
+      const { amount } = result.data;
       const pricePerToken = 50;
       const totalPrice = amount * pricePerToken;
 
@@ -117,11 +123,17 @@ export class TokenController {
   // Sell tokens
   sellTokens = asyncHandler(
     async (req: Request, res: Response, next: NextFunction) => {
-      const { error, value } = validateTokenTransaction(req.body);
-      if (error) return next(createError(error.details[0].message, 400));
+      const result = validateTokenTransaction(req.body);
+      if (!result.success)
+        return next(
+          createError(
+            result.error.issues.map((i) => i.message).join(', '),
+            400
+          )
+        );
 
       const userId = req.user.id;
-      const { amount, pricePerToken } = value;
+      const { amount, pricePerToken } = result.data;
 
       // Get Prisma client lazily
       const prisma = await PrismaClientSingleton.getInstance();

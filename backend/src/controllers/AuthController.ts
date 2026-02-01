@@ -10,12 +10,17 @@ import { notificationService } from '../services';
 
 export class AuthController {
   register = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-    const { error, value } = validateUserRegistration(req.body);
-    if (error) {
-      return next(createError(error.details[0].message, 400));
+    const result = validateUserRegistration(req.body);
+    if (!result.success) {
+      return next(
+        createError(
+          result.error.issues.map((i) => i.message).join(', '),
+          400
+        )
+      );
     }
 
-    const { email, password, name, organizationName, role } = value;
+    const { email, password, name, organizationName, role } = result.data;
 
     // Get Prisma client lazily
     const prisma = await PrismaClientSingleton.getInstance();
@@ -77,12 +82,17 @@ export class AuthController {
   });
 
   login = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-    const { error, value } = validateUserLogin(req.body);
-    if (error) {
-      return next(createError(error.details[0].message, 400));
+    const result = validateUserLogin(req.body);
+    if (!result.success) {
+      return next(
+        createError(
+          result.error.issues.map((i) => i.message).join(', '),
+          400
+        )
+      );
     }
 
-    const { email, password } = value;
+    const { email, password } = result.data;
 
     // Get Prisma client lazily
     const prisma = await PrismaClientSingleton.getInstance();
