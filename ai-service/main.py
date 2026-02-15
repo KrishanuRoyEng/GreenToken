@@ -6,6 +6,7 @@ import json
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 from typing import List, Dict, Any
+import uvicorn
 
 app = FastAPI(title="GreenToken AI Service")
 
@@ -43,15 +44,9 @@ async def predict_carbon(data: Dict[str, float]):
             data.get("age", 10)
         ]]
         prediction = model.predict(features)[0]
-        preds = [tree.predict(features) for tree in model.estimators_]
-
-        uncert = np.std(preds)
-        conf = max(0.0, 1.0 - (uncert / 50.0))        
 
         return {
             "predicted_carbon_credits": round(prediction, 2),
-            "confidence_score": conf,
-            "uncertainity_score": uncert,
             "ecosystem_valuation_usd": round(prediction * 25, 2) # $25 per credit
         }
     except Exception as e:
@@ -112,3 +107,6 @@ async def process_geo_data(file: UploadFile = File(...)):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
+    
+if __name__=="__main__":
+    uvicorn.run(app)

@@ -46,7 +46,7 @@ const AIDashboard: React.FC = () => {
 
         try {
             // Get token from localStorage if you have auth
-            const token = localStorage.getItem('token');
+            const token = localStorage.getItem('authToken');
             const res = await axios.post(`${API_URL}/api/ai/process-file`, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
@@ -70,7 +70,7 @@ const AIDashboard: React.FC = () => {
         setIsLoading(true);
         setResults(null);
         try {
-            const token = localStorage.getItem('token');
+            const token = localStorage.getItem('authToken');
             const res = await axios.post(`${API_URL}/api/ai/predict`, manualInput, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -254,16 +254,7 @@ const AIDashboard: React.FC = () => {
                                     <p className="text-2xl font-bold text-ocean-600">${results.data.ecosystem_valuation_usd}</p>
                                 </div>
                             </div>
-
-                            <h4 className="text-sm font-medium mb-2">AI Confidence Score</h4>
-                            <div className="w-full bg-slate-200 rounded-full h-2.5 mb-2">
-                                <div
-                                    className="bg-blue-600 h-2.5 rounded-full"
-                                    style={{ width: `${results.data.confidence_score * 100}%` }}
-                                ></div>
-                            </div>
-                            <p className="text-xs text-right text-slate-500">{(results.data.confidence_score * 100).toFixed(0)}% Confidence</p>
-
+                            
                             <Button variant="secondary" className="w-full mt-4" onClick={() => handleSaveProject({ ...manualInput, ...results.data }, 'manual')}>
                                 Save to Map 🗺️
                             </Button>
