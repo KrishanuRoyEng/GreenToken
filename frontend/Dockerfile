@@ -1,4 +1,5 @@
-FROM node:22-alpine
+# Stage 1: Build the React application
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -6,15 +7,21 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
-# Copy source code
+# Copy source code and build
 COPY . .
-
-# Build the app
 RUN npm run build
 
-# Install serve to run the app
-RUN npm install -g serve
+# Stage 2: Serve with Nginx
+FROM nginx:alpine
 
+# Copy built assets from builder stage
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy custom Nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Expose port 3000
 EXPOSE 3000
 
-CMD ["serve", "-s", "dist", "-l", "3000"]
+# Start Nginx
+CMD ["nginx", "-g", "daemon off;"]
